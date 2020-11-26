@@ -26,7 +26,7 @@ class TokenERC20Contract extends Contract {
     */
     async TokenName(ctx) {
         const nameBytes = await ctx.stub.getState(nameKey);
-        return JSON.stringify(nameBytes.toString())
+        return nameBytes.toString()
     }
 
     /**
@@ -377,54 +377,39 @@ class TokenERC20Contract extends Contract {
     }
 
 
-    async BrunFrom(ctx, from, amount) {
-            const balanceKey = ctx.stub.createCompositeKey(balancePrefix, [from]) 
-
-            const currentBalanceBytes = await ctx.stub.getState(balanceKey)
-
-            if (!currentBalanceBytes || currentBalanceBytes.length === 0) {
-                throw new Error(`the balance does not exist`)
-            }
-            const currentBalance = parseInt(currentBalanceBytes.toString())
-            const updatedBalance = currentBalance - amount
-
-            await ctx.stub.putState(balanceKey, Buffer.from(totalSupply.toString()))
-
-            const totalSupplyBytes = await ctx.stub.getState(totalSupplyBytes) 
-            if (!totalSupplyBytes || totalSupplyBytes.length == 0) {
-                throw new Error(`totalSupply does not exist`)
-            }
-
-            const totalSupply = parentInt(totalSupplyBytes.toString()- amount)
-            await ctx.stub.putState(totalSupply, Buffer.from(totalSupply.toString()))
-
-           // Emit the Transfer event
-            const transferEvent = { from: from, to: '0x0', value: amount };
-            ctx.stub.setEvent('Transfer', Buffer.from(JSON.stringify(transferEvent)));
-
-            console.log(`user account ${minter} balance updated from ${currentBalance} to ${updatedBalance}`);
-         return true;
-    }
-
     /**
-     * ClientAccountBalance returns the balance of the requesting client's account.
-     *
-     * @param {Context} ctx the transaction context
-     * @returns {Number} Returns the account balance
+     * 
+     * Burn function literraly not needed 
      */
-    async ClientAccountBalance(ctx) {
-        // Get ID of submitting client identity
-        const clientAccountID = ctx.clientIdentity.getID();
+    // async BrunFrom(ctx, from, amount) {
+    //         const balanceKey = ctx.stub.createCompositeKey(balancePrefix, [from]) 
 
-        const balanceKey = ctx.stub.createCompositeKey(balancePrefix, [clientAccountID]);
-        const balanceBytes = await ctx.stub.getState(balanceKey);
-        if (!balanceBytes || balanceBytes.length === 0) {
-            throw new Error(`the account ${clientAccountID} does not exist`);
-        }
-        const balance = parseInt(balanceBytes.toString());
+    //         const currentBalanceBytes = await ctx.stub.getState(balanceKey)
 
-        return balance;
-    }
+    //         if (!currentBalanceBytes || currentBalanceBytes.length === 0) {
+    //             throw new Error(`the balance does not exist`)
+    //         }
+    //         const currentBalance = parseInt(currentBalanceBytes.toString())
+    //         const updatedBalance = currentBalance - amount
+
+    //         await ctx.stub.putState(balanceKey, Buffer.from(totalSupply.toString()))
+
+    //         const totalSupplyBytes = await ctx.stub.getState(totalSupplyBytes) 
+    //         if (!totalSupplyBytes || totalSupplyBytes.length == 0) {
+    //             throw new Error(`totalSupply does not exist`)
+    //         }
+
+    //         const totalSupply = parentInt(totalSupplyBytes.toString()- amount)
+    //         await ctx.stub.putState(totalSupply, Buffer.from(totalSupply.toString()))
+
+    //        // Emit the Transfer event
+    //         const transferEvent = { from: from, to: '0x0', value: amount };
+    //         ctx.stub.setEvent('Transfer', Buffer.from(JSON.stringify(transferEvent)));
+
+    //         console.log(`user account ${minter} balance updated from ${currentBalance} to ${updatedBalance}`);
+    //      return true;
+    // }
+
 
     // ClientAccountID returns the id of the requesting client's account.
     // In this implementation, the client account ID is the clientId itself.
