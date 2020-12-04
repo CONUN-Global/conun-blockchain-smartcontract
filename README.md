@@ -1,7 +1,38 @@
-## Conun Private Blockchain Chaincodes.
-#
-</br>
-### 1 ERC20Token - Conun Private Blockchain token
- - Erc20 protocl based Conun Private token. This TOKEN is used in private network as a main cryptocurrency to make transcations and payments
-### 2 DappFileStorage - Conun FileStorage Dapp chaincode
+# CONUN Manager Application
+![Minimum Node Requirement](https://img.shields.io/badge/node-%3E%3D6.14.0-brightgreen.svg)
+![NPM](https://img.shields.io/npm/v/npm)
+<br/>
+<p align="center">
+  <img alt="CONUN preview" src="https://conun.io/img/conun_logo_big.png" height="60" />
+  <br><br>
+  <p align="center">Distributed Supercomputing Platform</p>
+</p>
+
+<p align="center"> 
+The Conun Private Blockchain Smart Contracts
+</p>
+<br/>
+<br/>
+
+## Conun Private Blockchain Chaincodes
+### ERC20Token:
+  * BalanceOf().
+  * Transfer().
+  * TransferFrom().
+  * Approve().
+  * Allownace().
+  * Mint().
+  * Burn()
+
+
+
+### DappFileStorage
+  * CreateFile().
+  * UpdateFileProgress().
+  * CancelFileProgress().
+  * OrderFileFromAuthor().
+<br/>
+<br/>
+
+
 
