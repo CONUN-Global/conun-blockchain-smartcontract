@@ -26,6 +26,13 @@ type FileData struct {
 	Clients   []string `json:"Clients"`   // clients wallet addresses
 }
 
+type OrderFile struct {
+	ID     string `json:"ID"`
+	Author string `json:"Author"`
+	Path   string `json:"Path"`
+	Price  int    `json:"Price"`
+}
+
 /**
  * function: CreateFile
  *
@@ -161,7 +168,7 @@ func (s *SmartContract) CancelFileProgress(ctx contractapi.TransactionContextInt
 	} else if exists {
 		fileJSON, _ := ctx.GetStub().GetState(id)
 		var tempFile FileData
-		if err = json.Unmarshal(fileJSON, &fileJSON); err != nil {
+		if err = json.Unmarshal(fileJSON, &tempFile); err != nil {
 			return false, err
 		}
 		if tempFile.Author != author {
@@ -179,6 +186,63 @@ func (s *SmartContract) CancelFileProgress(ctx contractapi.TransactionContextInt
 		}
 	}
 	return false, nil
+}
+
+/**
+ * OrderFileFromAouthor
+ *
+ * @param {Context} ctx the transaction\
+ * @param {String} id of the file
+ * @param {String} clinet the client wallet.id
+ */
+
+func (s *SmartContract) OrderFileFromAuthor(ctx contractapi.TransactionContextInterface, id, client string) (bool, OrderFile) {
+	exists, err := s.FileExists(ctx, id)
+	if err != nil {
+		return false, OrderFile{}
+	} else if exists {
+		fileJSON, _ := ctx.GetStub().GetState(id)
+		var tempFile FileData
+		if err = json.Unmarshal(fileJSON, &tempFile); err != nil {
+			return false, OrderFile{}
+		}
+		// invoke token chaincode function
+		// check the balance of the user
+		params := []string{"BalanceOf", client}
+		queryArgs := make([][]byte, len(params))
+		for i, arg := range params {
+			queryArgs[i] = []byte(arg)
+		}
+		response := ctx.GetStub().InvokeChaincode("token", queryArgs, "mychannel")
+		if response.Status != 200 {
+			return false, OrderFile{}
+		}
+		toInt, _ := strconv.Atoi(string(response.Payload))
+		if tempFile.Price > toInt {
+			return false, OrderFile{}
+		}
+
+		transferParam := []string{"Transfer", client, tempFile.Author, strconv.Itoa(tempFile.Price)}
+		transferArgs := make([][]byte, len(transferParam))
+		for j, args := range transferParam {
+			transferArgs[j] = []byte(args)
+		}
+		resp := ctx.GetStub().InvokeChaincode("token", transferArgs, "mychannel")
+		if resp.Status != 200 {
+			return false, OrderFile{}
+		}
+		if respBool, err := strconv.ParseBool(string(resp.Payload)); !respBool || err != nil {
+			return false, OrderFile{}
+		}
+		var result OrderFile
+		result.Author = tempFile.Author
+		result.ID = tempFile.ID
+		result.Path = tempFile.Path
+		result.Price = tempFile.Price
+		return true, result
+
+	}
+	return false, OrderFile{}
 }
 
 /*
