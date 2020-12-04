@@ -1,4 +1,3 @@
-# CONUN Manager Application
 ![Minimum Node Requirement](https://img.shields.io/badge/node-%3E%3D6.14.0-brightgreen.svg)
 ![NPM](https://img.shields.io/npm/v/npm)
 <br/>
@@ -8,9 +7,6 @@
   <p align="center">Distributed Supercomputing Platform</p>
 </p>
 
-<p align="center"> 
-The Conun Private Blockchain Smart Contracts
-</p>
 <br/>
 <br/>
 
