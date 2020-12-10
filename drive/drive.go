@@ -1,15 +1,16 @@
 package main
 
 import (
-	"dappFileStorage/chaincode"
 	"fmt"
+
+	"github.com/drive/chaincode"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
 func main() {
 
-	dappFileStorage, err := contractapi.NewChaincode(&chaincode.Smartcontract{})
+	dappFileStorage, err := contractapi.NewChaincode(&chaincode.SmartContract{})
 	if err != nil {
 		fmt.Println(fmt.Sprintf("Error init SmartContract %s", err))
 	}

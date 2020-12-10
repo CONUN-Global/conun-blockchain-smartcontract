@@ -2,9 +2,11 @@ package chaincode_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
-	"chaincode/mocks"
+	"github.com/drive/chaincode"
+	"github.com/drive/chaincode/mocks"
 
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -28,33 +30,42 @@ type stateQueryIterator interface {
 }
 
 // test ============
-
 func TestCreatFile(t *testing.T) {
 	chaincodeStub := &mocks.ChaincodeStub{}
 	transactionContext := &mocks.TransactionContext{}
 	transactionContext.GetStubReturns(chaincodeStub)
 
-	createFile := dappFileStorage.SmartContract{}
-	err := createFile.CreateFile(transactionContext, "someId1", "", "", 0, 0, 0, 0, "")
+	createFile := chaincode.SmartContract{}
+	err := createFile.CreateFile(transactionContext, "someId1", "aziz", "", 1, 1, 1, 1, "")
 	require.NoError(t, err)
 
-	chaincodeStub.GetStubReturns([]byte{}, nil)
+	chaincodeStub.GetStateReturns([]byte{}, nil)
 	err = createFile.CreateFile(transactionContext, "someId1", "", "", 0, 0, 0, 0, "")
 	require.EqualError(t, err, "the file with with someId1 is already exists")
 
 }
+func TestOrderFileFromAuthor(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
 
-func TestUpdateFileProgress(t *Testing.T) {
+	orderFileFromAuthor := chaincode.SmartContract{}
+	err := orderFileFromAuthor.OrderFileFromAuthor(transactionContext, "someId", "Sara")
+	//require.NoError(t, err, resp)
+	fmt.Println(err)
+}
+
+func TestUpdateFileProgress(t *testing.T) {
 	chaincodeStub := &mocks.ChaincodeStub{}
 	transactionContext := &mocks.TransactionContext{}
 	transactionContext.GetStubReturns(chaincodeStub)
 
 	expectedFileProgress := &chaincode.FileData{ID: "someId1"}
 	bytes, err := json.Marshal(expectedFileProgress)
-	require.noError(t, err)
-
-	chaincodeStub.GetStubReturns(bytes, nil)
-	fileContract := chaincode.SmartContract{}
-	err = fileContract.UpdateFileProgress(transactionContext, "", "", 0)
 	require.NoError(t, err)
+
+	chaincodeStub.GetStateReturns(bytes, nil)
+	fileContract := chaincode.SmartContract{}
+	check, err := fileContract.UpdateFileProgress(transactionContext, "", "", 0)
+	require.NoError(t, err, check)
 }

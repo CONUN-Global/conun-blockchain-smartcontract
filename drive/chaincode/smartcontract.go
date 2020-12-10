@@ -47,25 +47,20 @@ type OrderFile struct {
  * @param {String} provider The provider  wallet.id
  */
 func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, id, author, path string, state, period, rentPrice, price int, provider string) error {
-
 	// check for file existance
 	if exists, err := s.FileExists(ctx, id); err != nil {
 		return err
 	} else if exists {
 		return fmt.Errorf("The file %s already exists", id)
 	}
-	// invoke token chaincode function
-	// check the balance of the user
 	params := []string{"BalanceOf", author}
 	queryArgs := make([][]byte, len(params))
 	for i, arg := range params {
 		queryArgs[i] = []byte(arg)
 	}
-	// invokeArgs := []byte([]params)
-	//	invokeArgs := util.ToChain
 	response := ctx.GetStub().InvokeChaincode("token", queryArgs, "mychannel")
 	if response.Status != 200 {
-		return fmt.Errorf("Failed to query token chaincode Got Error: %s", response.Payload)
+		return fmt.Errorf("Failed to query token chaincode Got Error: %s", string(response.Payload))
 	}
 	toInt, err := strconv.Atoi(string(response.Payload))
 	if err != nil {
@@ -94,7 +89,7 @@ func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, 
 		}
 		resp := ctx.GetStub().InvokeChaincode("token", invokeArgs, "mychannel")
 		if resp.Status != 200 {
-			return fmt.Errorf("Failed to query token chaincode Got Error: %s", response.Payload)
+			return fmt.Errorf("Failed to query token chaincode Got Error: %s", resp.Payload)
 		}
 		respBool, err := strconv.ParseBool(string(resp.Payload))
 		if !respBool {
@@ -207,15 +202,17 @@ func (s *SmartContract) CancelFileProgress(ctx contractapi.TransactionContextInt
  * @param {String} clinet the client wallet.id
  */
 
-func (s *SmartContract) OrderFileFromAuthor(ctx contractapi.TransactionContextInterface, id, client string) (bool, OrderFile) {
+func (s *SmartContract) OrderFileFromAuthor(ctx contractapi.TransactionContextInterface, id, client string) bool {
 	exists, err := s.FileExists(ctx, id)
 	if err != nil {
-		return false, OrderFile{}
+		// return false, &OrderFile{}
+		return false
 	} else if exists {
 		fileJSON, _ := ctx.GetStub().GetState(id)
 		var tempFile FileData
 		if err = json.Unmarshal(fileJSON, &tempFile); err != nil {
-			return false, OrderFile{}
+			// return false, &OrderFile{}
+			return false
 		}
 		// invoke token chaincode function
 		// check the balance of the user
@@ -226,11 +223,13 @@ func (s *SmartContract) OrderFileFromAuthor(ctx contractapi.TransactionContextIn
 		}
 		response := ctx.GetStub().InvokeChaincode("token", queryArgs, "mychannel")
 		if response.Status != 200 {
-			return false, OrderFile{}
+			//return false, &OrderFile{}
+			return false
 		}
 		toInt, _ := strconv.Atoi(string(response.Payload))
 		if tempFile.Price > toInt {
-			return false, OrderFile{}
+			//return false, &OrderFile{}
+			return false
 		}
 
 		transferParam := []string{"Transfer", client, tempFile.Author, strconv.Itoa(tempFile.Price)}
@@ -240,20 +239,21 @@ func (s *SmartContract) OrderFileFromAuthor(ctx contractapi.TransactionContextIn
 		}
 		resp := ctx.GetStub().InvokeChaincode("token", transferArgs, "mychannel")
 		if resp.Status != 200 {
-			return false, OrderFile{}
+			return false
 		}
 		if respBool, err := strconv.ParseBool(string(resp.Payload)); !respBool || err != nil {
-			return false, OrderFile{}
+			return false
 		}
-		var result OrderFile
-		result.Author = tempFile.Author
-		result.ID = tempFile.ID
-		result.Path = tempFile.Path
-		result.Price = tempFile.Price
-		return true, result
+		// var result OrderFile
+		// result.Author = tempFile.Author
+		// result.ID = tempFile.ID
+		// result.Path = tempFile.Path
+		// result.Price = tempFile.Price
+		return true
 
 	}
-	return false, OrderFile{}
+
+	return false
 }
 
 /*
