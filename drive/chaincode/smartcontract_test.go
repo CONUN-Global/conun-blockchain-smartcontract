@@ -1,7 +1,6 @@
 package chaincode_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -60,12 +59,28 @@ func TestUpdateFileProgress(t *testing.T) {
 	transactionContext := &mocks.TransactionContext{}
 	transactionContext.GetStubReturns(chaincodeStub)
 
-	expectedFileProgress := &chaincode.FileData{ID: "someId1"}
-	bytes, err := json.Marshal(expectedFileProgress)
-	require.NoError(t, err)
-
-	chaincodeStub.GetStateReturns(bytes, nil)
+	chaincodeStub.GetStateReturns(err, nil)
 	fileContract := chaincode.SmartContract{}
 	check, err := fileContract.UpdateFileProgress(transactionContext, "", "", 0)
 	require.NoError(t, err, check)
+}
+
+func TestFileExists(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	fileExists := &chaincode.SmartContract{}
+	_, err := fileExists.FileExists(transactionContext, "someId1")
+	require.NoError(t, err)
+}
+
+func TestCancelFileProgress(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	cancelFileProgress := &chaincode.SmartContract{}
+	_, err := cancelFileProgress.CancelFileProgress(transactionContext, "someId1,", "", 0)
+	require.NoError(t, err)
 }
