@@ -1,7 +1,7 @@
 
 'use strict';
 
-const { Contract } = require('fabric-contract-api');
+const { Contract, Context } = require('fabric-contract-api');
 
 // Define objectType names for prefix
 const balancePrefix = 'balance';
@@ -16,41 +16,17 @@ const totalSupplyKey = '0';
 class TokenERC20Contract extends Contract {
 
     /**
-     * Return the name of the token - e.g. "MyToken".
-     * The original function name is `name` in ERC20 specification.
-     * However, 'name' conflicts with a parameter `name` in `Contract` class.
-     * As a work around, we use `TokenName` as an alternative function name.
-     *
-     * @param {Context} ctx the transaction context
-     * @returns {String} Returns the name of the token
-    */
-    async TokenName(ctx) {
-        const nameBytes = await ctx.stub.getState(nameKey);
-        return nameBytes.toString()
-    }
+     * Retunrn token info
+     * @param {Context} ctx the transaction context 
+     */
+    async TokenInfo(ctx) {
+        const nameBytes = await ctx.stub.getState(nameKey)
+        const symbolBytes = await ctx.stub.getState(symbolKey)
+        const decimalsBytes = await ctx.stub.getState(decimalsKey)
+        return JSON.stringify({tokenName:nameBytes.toString(),
+                                symbol:symbolBytes.toString(),
+                                decimal: decimalsBytes.toString()})
 
-    /**
-     * Return the symbol of the token. E.g. “HIX”.
-     *
-     * @param {Context} ctx the transaction context
-     * @returns {String} Returns the symbol of the token
-    */
-    async Symbol(ctx) {
-        const symbolBytes = await ctx.stub.getState(symbolKey);
-        return symbolBytes.toString();
-    }
-
-    /**
-     * Return the number of decimals the token uses
-     * e.g. 8, means to divide the token amount by 100000000 to get its user representation.
-     *
-     * @param {Context} ctx the transaction context
-     * @returns {Number} Returns the number of decimals
-    */
-    async Decimals(ctx) {
-        const decimalsBytes = await ctx.stub.getState(decimalsKey);
-        const decimals = parseInt(decimalsBytes.toString());
-        return decimals;
     }
 
     /**
@@ -94,7 +70,7 @@ class TokenERC20Contract extends Contract {
      * @param {Context} ctx the transaction context
      * @param {String} to The recipient
      * @param {Integer} value The amount of token to be transferred
-     * @returns {Boolean} Return whether the transfer was successful or not
+     * @returns {object} Return whether the transfer was successful or not
      */
     async Transfer(ctx, _from, to, value) {
        // const from = ctx.clientIdentity.getID();
@@ -108,7 +84,12 @@ class TokenERC20Contract extends Contract {
         const transferEvent = { from, to, value: parseInt(value) };
         ctx.stub.setEvent('Transfer', Buffer.from(JSON.stringify(transferEvent)));
 
-        return true;
+        return JSON.stringify({transfer: true,
+                                from: _from,
+                                to:  to,
+                                amoun: value,
+                                txID : ctx.stub.getTxID(),
+                                timestamp: ctx.stub.getTxTimestamp});
     }
 
     /**
@@ -326,7 +307,9 @@ class TokenERC20Contract extends Contract {
         ctx.stub.setEvent('Transfer', Buffer.from(JSON.stringify(transferEvent)));
 
         console.log(`minter account ${minter} balance updated from ${currentBalance} to ${updatedBalance}`);
-        return true;
+        return JSON.stringify({mint: true,
+                                minter: minter,
+                                amount : amount});
     }
 
     /**
@@ -373,7 +356,9 @@ class TokenERC20Contract extends Contract {
         ctx.stub.setEvent('Transfer', Buffer.from(JSON.stringify(transferEvent)));
 
         console.log(`minter account ${minter} balance updated from ${currentBalance} to ${updatedBalance}`);
-        return true;
+        return JSON.stringify({burn: true,
+                               minter: minter,
+                               amount : amount});;
     }
 
 
