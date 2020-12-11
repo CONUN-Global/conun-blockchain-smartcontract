@@ -298,3 +298,28 @@ func (s *SmartContract) GetAllFiles(ctx contractapi.TransactionContext) (error, 
 	}
 	return nil, files
 }
+
+/**
+ * DeleteFile
+ *
+ * @param {Context} ctx the transaction
+ * @param {String} id the id of the file
+ * @param {String} author the author of the file
+ */
+func (s *SmartContract) DeleteFile(ctx contractapi.TransactionContextInterface, id, author string) (error, bool) {
+	if exists, err := s.FileExists(ctx, id); err != nil || !exists {
+		return err, false
+	}
+
+	file, _ := ctx.GetStub().GetState(id)
+	var fileJson FileData
+	if err := json.Unmarshal(file, &fileJson); err != nil {
+		return err, false
+	}
+	if &author != &fileJson.Author {
+		return fmt.Errorf("author wallet address does not match"), false
+	}
+
+	return ctx.GetStub().DelState(id), true
+
+}
