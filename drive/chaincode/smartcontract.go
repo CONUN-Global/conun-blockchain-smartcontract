@@ -24,6 +24,8 @@ type FileData struct {
 	Price     int      `json:"Price"`     // price of the file for clients "paid to author"
 	Provider  string   `json:"Provider"`  // provider wallet address
 	Clients   []string `json:"Clients"`   // clients wallet addresses
+	TxID      string   `json:"TxID"`      // transcation id
+	Timestamp string   `json:"Timestamp"` // timestamp of transaction
 }
 
 type OrderFile struct {
@@ -31,6 +33,15 @@ type OrderFile struct {
 	Author string `json:"Author"`
 	Path   string `json:"Path"`
 	Price  int    `json:"Price"`
+}
+
+// initialize response
+type Response struct {
+	Fcn       string `json:"Fcn"`       // function name
+	ID        string `json:"ID"`        // file id
+	Success   bool   `json:"Success"`   // true if success
+	TxID      string `json:"TxID"`      // transction id
+	Timestamp string `json:"Timestamp"` // timestamp of the transaction
 }
 
 /**
