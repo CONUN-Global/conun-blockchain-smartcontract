@@ -267,20 +267,34 @@ func (s *SmartContract) OrderFileFromAuthor(ctx contractapi.TransactionContextIn
 	return false
 }
 
-/*
-main()
+/**
+ * GetaLLFiles
+ *
+ * @param {Context} ctx the transaction\
+ */
+func (s *SmartContract) GetAllFiles(ctx contractapi.TransactionContext) (error, []*FileData) {
+	//range query with empty string for startKey and EndKey does an
+	// open-ended query of all files in the chaincode namespace
 
-Default main function that runs by deployin chincode
-Do not invoke main function
-*/
-// func main() {
-// 	chaincode, err := contractapi.NewChaincode(new(SmartContract))
+	resultIterator, err := ctx.GetStub().GetStateByRange("", "")
+	if err != nil {
+		return err, nil
+	}
 
-// 	if err != nil {
-// 		fmt.Println(fmt.Sprintf("Error create DappFileStorage chaincode: %s", err.Error()))
-// 	}
+	defer resultIterator.Close()
 
-// 	if err := chaincode.Start(); err != nil {
-// 		fmt.Println(fmt.Sprintf("Error starting DappFileStorage chaincode: %s", err.Error()))
-// 	}
-// }
+	var files []*FileData
+	for resultIterator.HasNext() {
+		queryResponse, err := resultIterator.Next()
+		if err != nil {
+			return err, nil
+		}
+
+		var file FileData
+		if err = json.Unmarshal(queryResponse.Value, &file); err != nil {
+			return err, nil
+		}
+		files = append(files, &file)
+	}
+	return nil, files
+}
