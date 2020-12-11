@@ -49,6 +49,11 @@ class TokenERC20Contract extends Contract {
      * @returns {Number} Returns the account balance
      */
     async BalanceOf(ctx, owner) {
+        const txSender = ctx.clientIdentity.getID()
+                // adding sender double check
+        if (txSender.includes(owner) === false) {
+            throw new Error('senders account does not match with tx sender ');
+        }
         const balanceKey = ctx.stub.createCompositeKey(balancePrefix, [owner]);
 
         const balanceBytes = await ctx.stub.getState(balanceKey);
@@ -75,6 +80,11 @@ class TokenERC20Contract extends Contract {
     async Transfer(ctx, _from, to, value) {
        // const from = ctx.clientIdentity.getID();
         const from = _from
+        const txSender = ctx.clientIdentity.getID()
+        // adding sender double check
+        if (txSender.includes(from) === false) {
+            throw new Error('senders account does not match with tx sender ');
+        }
         const transferResp = await this._transfer(ctx, from, to, value);
         if (!transferResp) {
             throw new Error('Failed to transfer');
@@ -262,11 +272,18 @@ class TokenERC20Contract extends Contract {
      */
     async Mint(ctx, minter,amount) {
 
+        
+        const txSender = ctx.clientIdentity.getID()
+        // adding sender double check
+        if (txSender.includes(minter) === false) {
+            throw new Error('senders account does not match with tx sender ');
+        }
         // Check minter authorization - this sample assumes Org1 is the central banker with privilege to mint new tokens
         const clientMSPID = ctx.clientIdentity.getMSPID();
         if (clientMSPID !== 'Org1MSP') {
             throw new Error('client is not authorized to mint new tokens');
         }
+        
 
         // Get ID of submitting client identity
         //const minter = ctx.clientIdentity.getID();
@@ -321,6 +338,11 @@ class TokenERC20Contract extends Contract {
      */
     async Burn(ctx, minter, amount) {
 
+        const txSender = ctx.clientIdentity.getID()
+        // adding sender double check
+        if (txSender.includes(minter) === false) {
+            throw new Error('senders account does not match with tx sender ');
+        }
         // Check minter authorization - this sample assumes Org1 is the central banker with privilege to burn tokens
         const clientMSPID = ctx.clientIdentity.getMSPID();
         if (clientMSPID !== 'Org1MSP') {
