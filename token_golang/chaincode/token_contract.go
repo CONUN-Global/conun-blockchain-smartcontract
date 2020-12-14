@@ -227,7 +227,7 @@ func (s *SmartContract) BalanceOf(ctx contractapi.TransactionContextInterface, a
 		return 0, fmt.Errorf("failed to read from world state: %v", err)
 	}
 	if balanceBytes == nil {
-		return 0, fmt.Errorf("the account %s does not exist", account)
+		return 0, nil
 	}
 
 	balance, _ := strconv.Atoi(string(balanceBytes)) // Error handling not needed since Itoa() was used when setting the account balance, guaranteeing it was an integer.
