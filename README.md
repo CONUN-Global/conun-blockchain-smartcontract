@@ -27,8 +27,8 @@
   * UpdateFileProgress().
   * CancelFileProgress().
   * OrderFileFromAuthor().
-  * GetAllFiles()
-  * DeleteFile()
+  * GetAllFiles().
+  * DeleteFile().
 <br/>
 <br/>
 
