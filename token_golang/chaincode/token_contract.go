@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -15,6 +16,18 @@ const totalSupplyKey = "totalSupply"
 
 // Define objectType names for prefix
 const allowancePrefix = "allowance"
+
+// name of the token
+const namePrefix = "namePrefix"
+
+// symbol of the token
+const symbolPrefix = "SYB"
+
+//decimal of the token
+const decimalPrefix = "decimal"
+
+//owner of the contract
+const owner = "owner"
 
 // SmartContract provides functions for transferring tokens between accounts
 type SmartContract struct {
@@ -26,6 +39,74 @@ type event struct {
 	from  string
 	to    string
 	value int
+}
+
+// respnse struct
+type Response struct {
+	Success   bool                 `json:"Success"`
+	TxID      string               `json:"TxID"`
+	Timestamp *timestamp.Timestamp `json:"Timestamp"`
+}
+
+// info response struct
+type Info struct {
+	Owner     string `json:"Owner"`
+	TokenName string `json:"TokenName"`
+	Symbol    string `json:"Symbol"`
+	Decimal   string `json:"Decimal"`
+}
+
+func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner string) (interface{}, error) {
+
+	exists, err := ctx.GetStub().GetState(owner)
+	if err != nil || exists != nil {
+		return nil, fmt.Errorf("Contract already initalized by %s error:%s", string(exists), err)
+	}
+	err = ctx.GetStub().PutState(namePrefix, []byte("CONUN"))
+	err = ctx.GetStub().PutState(symbolPrefix, []byte("CON"))
+	err = ctx.GetStub().PutState(decimalPrefix, []byte(strconv.Itoa(18)))
+	err = ctx.GetStub().PutState(owner, []byte(owner))
+	if err != nil {
+		return nil, fmt.Errorf("error setting values %s", err)
+	}
+	txTime, _ := ctx.GetStub().GetTxTimestamp()
+	res := &Response{
+		Success:   true,
+		TxID:      ctx.GetStub().GetTxID(),
+		Timestamp: txTime,
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return string(content), nil
+}
+
+func (s *SmartContract) GetInfo(ctx contractapi.TransactionContextInterface) (interface{}, error) {
+	deployer, err := ctx.GetStub().GetState(owner)
+	tokenName, err := ctx.GetStub().GetState(namePrefix)
+	symbol, err := ctx.GetStub().GetState(symbolPrefix)
+	decimal, err := ctx.GetStub().GetState(decimalPrefix)
+
+	if err != nil {
+		return nil, err
+	}
+	if decimal == nil || tokenName == nil || symbol == nil || deployer == nil {
+		return nil, fmt.Errorf("Init is not declared %s,%s,%s", string(decimal), string(tokenName), string(deployer))
+	}
+
+	res := &Info{
+		Owner:     string(deployer),
+		TokenName: string(tokenName),
+		Symbol:    string(symbol),
+		Decimal:   string(decimal),
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+
+	return string(content), nil
 }
 
 // Mint creates new tokens and adds them to minter's account balance

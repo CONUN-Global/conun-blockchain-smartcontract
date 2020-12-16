@@ -1,6 +1,7 @@
 package chaincode_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/hyperledger/fabric-chaincode-go/shim"
@@ -36,4 +37,26 @@ func TestMint(t *testing.T) {
 	err := mint.Mint(transactionContext, "aziz", 10)
 	require.NoError(t, err)
 
+}
+
+func TestInit(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	init := chaincode.SmartContract{}
+	resp, err := init.Init(transactionContext, "0xxx")
+	fmt.Println(resp)
+	require.NoError(t, err)
+}
+
+func TestGetInfo(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	info := chaincode.SmartContract{}
+	resp, err := info.GetInfo(transactionContext)
+	fmt.Println(resp)
+	require.NoError(t, err)
 }
