@@ -28,18 +28,6 @@ type stateQueryIterator interface {
 	shim.StateQueryIteratorInterface
 }
 
-func TestMint(t *testing.T) {
-	chaincodeStub := &mocks.ChaincodeStub{}
-	transactionContext := &mocks.TransactionContext{}
-	transactionContext.GetStubReturns(chaincodeStub)
-
-	mint := chaincode.SmartContract{}
-	resp, err := mint.Mint(transactionContext, "aziz", 10)
-	require.NoError(t, err)
-	fmt.Println(resp)
-
-}
-
 func TestInit(t *testing.T) {
 	chaincodeStub := &mocks.ChaincodeStub{}
 	transactionContext := &mocks.TransactionContext{}
@@ -49,6 +37,39 @@ func TestInit(t *testing.T) {
 	resp, err := init.Init(transactionContext, "0xxx")
 	fmt.Println(resp)
 	require.NoError(t, err)
+}
+func TestMint(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	mint := chaincode.SmartContract{}
+	resp, err := mint.Mint(transactionContext, 10)
+	require.NoError(t, err)
+	fmt.Println(resp)
+
+}
+
+func TestBurn(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	burn := chaincode.SmartContract{}
+	resp, err := burn.Burn(transactionContext, 10)
+	require.NoError(t, err)
+	fmt.Println(resp)
+}
+
+func TestTransfer(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	transfer := chaincode.SmartContract{}
+	resp, err := transfer.Transfer(transactionContext, "00x", "00x5", 10)
+	require.NoError(t, err)
+	fmt.Println(resp)
 }
 
 func TestGetInfo(t *testing.T) {
