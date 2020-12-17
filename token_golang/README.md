@@ -3,7 +3,7 @@
 
  The ERC-20 token smart contract demonstrates how to create and transfer Erc20 based tokens using account bassed model. There is an account for each participant that holds a balance tokens.
 
- * The <i>"Init</i> transaction initializes Token details: name,symbol,decimal, owner.    
+ * The <i>Init</i> transaction initializes Token details: name,symbol,decimal, owner.    
    * Init(String: owner) --> Return Json or Error
    * GetDetails() --> Return Json or Error
    * BalanceOf(String: userAccount) --> Return Int balance or Error.

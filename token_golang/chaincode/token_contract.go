@@ -1,6 +1,7 @@
 package chaincode
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,7 +29,7 @@ const symbolPrefix = "SYB"
 const decimalPrefix = "decimal"
 
 //owner of the contract
-const owner = "owner"
+const ownerPrefix = "owner"
 
 // SmartContract provides functions for transferring tokens between accounts
 type SmartContract struct {
@@ -77,14 +78,14 @@ type Info struct {
 */
 func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner string) (interface{}, error) {
 
-	exists, err := ctx.GetStub().GetState(owner)
+	exists, err := ctx.GetStub().GetState(ownerPrefix)
 	if err != nil || exists != nil {
 		return nil, fmt.Errorf("Contract already initalized by %s error:%s", string(exists), err)
 	}
 	err = ctx.GetStub().PutState(namePrefix, []byte("CONUN"))
 	err = ctx.GetStub().PutState(symbolPrefix, []byte("CON"))
 	err = ctx.GetStub().PutState(decimalPrefix, []byte(strconv.Itoa(18)))
-	err = ctx.GetStub().PutState(owner, []byte(owner))
+	err = ctx.GetStub().PutState(ownerPrefix, []byte(owner))
 	if err != nil {
 		return nil, fmt.Errorf("error setting values %s", err)
 	}
@@ -113,7 +114,7 @@ func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner 
 func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount int) (interface{}, error) {
 
 	// retrieve contract owner address
-	minterByte, err := ctx.GetStub().GetState(owner)
+	minterByte, err := ctx.GetStub().GetState(ownerPrefix)
 	if err != nil {
 		return nil, fmt.Errorf("failed while getting minterAddress %s", err)
 	} else if minterByte == nil {
@@ -124,8 +125,10 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 	ownerID, err := ctx.GetClientIdentity().GetID()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user Address %s", err)
-	} else if strings.Contains(ownerID, minter) == false {
-		return nil, fmt.Errorf("you are not allowed to mint tokens, Sorry")
+	}
+
+	if verify, err := addressHelper(ownerID, minter); err != nil || !verify {
+		return nil, fmt.Errorf("failed to Mint  Sender is not valid to Mint: %s", err)
 	}
 
 	if amount <= 0 {
@@ -221,7 +224,7 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 
 	// Check minter authorization - this sample assumes Org1 is the central banker with privilege to burn new tokens
 	// retrieve contract owner address
-	minterByte, err := ctx.GetStub().GetState(owner)
+	minterByte, err := ctx.GetStub().GetState(ownerPrefix)
 	if err != nil {
 		return nil, fmt.Errorf("failed while getting minterAddress %s", err)
 	} else if minterByte == nil {
@@ -230,10 +233,9 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 	minter := string(minterByte)
 	// check if contract caller is contract owner
 	ownerID, err := ctx.GetClientIdentity().GetID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user Address %s", err)
-	} else if strings.Contains(ownerID, minter) == false {
-		return nil, fmt.Errorf("you are not allowed to mint tokens, Sorry")
+
+	if verify, err := addressHelper(ownerID, minter); err != nil || !verify {
+		return nil, fmt.Errorf("failed to Burn  Sender is not valid to Burn: %s", err)
 	}
 
 	if amount <= 0 {
@@ -326,10 +328,8 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, from, recipient string, amount int) (interface{}, error) {
 
 	caller, err := ctx.GetClientIdentity().GetID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user address: %s", err)
-	} else if strings.Contains(caller, from) == false {
-		return nil, fmt.Errorf("contract caller is not token sender")
+	if verify, err := addressHelper(caller, from); err != nil || !verify {
+		return nil, fmt.Errorf("failed to Transfer  Sender is not valid to Transfer: %s", err)
 	}
 
 	err = transferHelper(ctx, from, recipient, amount)
@@ -461,7 +461,7 @@ func (s *SmartContract) TotalSupply(ctx contractapi.TransactionContextInterface)
 }
 
 func (s *SmartContract) GetDetails(ctx contractapi.TransactionContextInterface) (interface{}, error) {
-	deployer, err := ctx.GetStub().GetState(owner)
+	deployer, err := ctx.GetStub().GetState(ownerPrefix)
 	tokenName, err := ctx.GetStub().GetState(namePrefix)
 	symbol, err := ctx.GetStub().GetState(symbolPrefix)
 	decimal, err := ctx.GetStub().GetState(decimalPrefix)
@@ -701,4 +701,16 @@ func transferHelper(ctx contractapi.TransactionContextInterface, from string, to
 	log.Printf("recipient %s balance updated from %d to %d", to, toCurrentBalance, toUpdatedBalance)
 
 	return nil
+}
+
+func addressHelper(encodedAdr, client string) (bool, error) {
+
+	decodedAdr, err := base64.StdEncoding.DecodeString(encodedAdr)
+	if err != nil {
+		return false, err
+	} else if strings.Contains(string(decodedAdr), client) {
+		return true, nil
+	}
+	return false, nil
+
 }
