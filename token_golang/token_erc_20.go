@@ -1,7 +1,8 @@
 /*
-SPDX-License-Identifier: Apache-2.0
-*/
-
+*
+* 	Copyright CONUN KOREA. All Rights Reserved
+*
+ */
 package main
 
 import (

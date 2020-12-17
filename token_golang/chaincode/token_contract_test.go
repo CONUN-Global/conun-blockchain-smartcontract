@@ -56,7 +56,7 @@ func TestGetInfo(t *testing.T) {
 	transactionContext.GetStubReturns(chaincodeStub)
 
 	info := chaincode.SmartContract{}
-	resp, err := info.GetInfo(transactionContext)
+	resp, err := info.GetDetails(transactionContext)
 	fmt.Println(resp)
 	require.NoError(t, err)
 }

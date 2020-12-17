@@ -56,6 +56,14 @@ type Info struct {
 	Decimal   string `json:"Decimal"`
 }
 
+/*
+	Init declares chaincode details
+
+	@param {Context} ctx the transaction context
+	@param {string} contract owner address
+
+	Return success interface or error
+*/
 func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner string) (interface{}, error) {
 
 	exists, err := ctx.GetStub().GetState(owner)
@@ -82,35 +90,15 @@ func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner 
 	return string(content), nil
 }
 
-func (s *SmartContract) GetInfo(ctx contractapi.TransactionContextInterface) (interface{}, error) {
-	deployer, err := ctx.GetStub().GetState(owner)
-	tokenName, err := ctx.GetStub().GetState(namePrefix)
-	symbol, err := ctx.GetStub().GetState(symbolPrefix)
-	decimal, err := ctx.GetStub().GetState(decimalPrefix)
+/*
+	Mint creates new tokens and adds them to contract owners account balance
+	 // this function triggers a Transfer event
 
-	if err != nil {
-		return nil, err
-	}
-	if decimal == nil || tokenName == nil || symbol == nil || deployer == nil {
-		return nil, fmt.Errorf("Init is not declared %s,%s,%s", string(decimal), string(tokenName), string(deployer))
-	}
+	@param {Context} ctx the transaction context
+	@param {string} the contract owner address
 
-	res := &Info{
-		Owner:     string(deployer),
-		TokenName: string(tokenName),
-		Symbol:    string(symbol),
-		Decimal:   string(decimal),
-	}
-	content, err := json.Marshal(res)
-	if err != nil {
-		return nil, err
-	}
-
-	return string(content), nil
-}
-
-// Mint creates new tokens and adds them to minter's account balance
-// This function triggers a Transfer event
+	Return success interface or error
+*/
 func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, minter string, amount int) error {
 
 	// Check minter authorization - this sample assumes Org1 is the central banker with privilege to mint new tokens
@@ -193,6 +181,15 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, minter
 
 // Burn redeems tokens the minter's account balance
 // This function triggers a Transfer event
+/*
+	Burn redeems tokens the contract owner's account balance
+	// this function triggers a Transfer event
+
+	@param {Context} ctx the transaction context
+	@param {string} the contract owner address
+
+	Return success interface or error
+*/
 func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, minter string, amount int) error {
 
 	// Check minter authorization - this sample assumes Org1 is the central banker with privilege to burn new tokens
@@ -271,9 +268,17 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, minter
 	return nil
 }
 
-// Transfer transfers tokens from client account to recipient account
-// recipient account must be a valid clientID as returned by the ClientID() function
-// This function triggers a Transfer event
+/*
+   Transfer transfers tokens from client account to recipient account
+   // recipient account must be a valid clientID
+   // this function triggers a Transfer event
+
+   @param {Context} ctx the transcation context
+   @param {string} client account address
+   @param {string} recipient account address
+
+   Returns success interface or error
+*/
 func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, from, recipient string, amount int) error {
 
 	// Get ID of submitting client identity
@@ -316,7 +321,14 @@ func (s *SmartContract) BalanceOf(ctx contractapi.TransactionContextInterface, a
 	return balance, nil
 }
 
-// ClientAccountBalance returns the balance of the requesting client's account
+/*
+	ClientAccountBalance returns the balance of the requesting client's account
+
+	@oaram {Context} ctx the transaction context
+
+	Returns int value of the balance or error
+
+*/
 func (s *SmartContract) ClientAccountBalance(ctx contractapi.TransactionContextInterface) (int, error) {
 
 	// Get ID of submitting client identity
@@ -338,9 +350,15 @@ func (s *SmartContract) ClientAccountBalance(ctx contractapi.TransactionContextI
 	return balance, nil
 }
 
-// ClientAccountID returns the id of the requesting client's account
-// In this implementation, the client account ID is the clientId itself
-// Users can use this function to get their own account id, which they can then give to others as the payment address
+/*
+	ClientAccountID returns the id of the requesting client's account
+	// in this implementation, the client account ID is the clientId itself
+	// users can use this function to get their own account id, which they can then give to otherss as the payment address
+
+	@param {Context} ctx the transaction context
+
+	Returns string user adress or error
+*/
 func (s *SmartContract) ClientAccountID(ctx contractapi.TransactionContextInterface) (string, error) {
 
 	// Get ID of submitting client identity
@@ -352,7 +370,13 @@ func (s *SmartContract) ClientAccountID(ctx contractapi.TransactionContextInterf
 	return clientAccountID, nil
 }
 
-// TotalSupply returns the total token supply
+/*
+	TotalSupply returns the totoal token supply
+
+	@param {Context} ctx the transaction context
+
+	Return int the total supply or error
+*/
 func (s *SmartContract) TotalSupply(ctx contractapi.TransactionContextInterface) (int, error) {
 
 	// Retrieve total supply of tokens from state of smart contract
@@ -375,9 +399,44 @@ func (s *SmartContract) TotalSupply(ctx contractapi.TransactionContextInterface)
 	return totalSupply, nil
 }
 
-// Approve allows the spender to withdraw from the calling client's token account
-// The spender can withdraw multiple times if necessary, up to the value amount
-// This function triggers an Approval event
+func (s *SmartContract) GetDetails(ctx contractapi.TransactionContextInterface) (interface{}, error) {
+	deployer, err := ctx.GetStub().GetState(owner)
+	tokenName, err := ctx.GetStub().GetState(namePrefix)
+	symbol, err := ctx.GetStub().GetState(symbolPrefix)
+	decimal, err := ctx.GetStub().GetState(decimalPrefix)
+
+	if err != nil {
+		return nil, err
+	}
+	if decimal == nil || tokenName == nil || symbol == nil || deployer == nil {
+		return nil, fmt.Errorf("Init is not declared %s,%s,%s", string(decimal), string(tokenName), string(deployer))
+	}
+
+	res := &Info{
+		Owner:     string(deployer),
+		TokenName: string(tokenName),
+		Symbol:    string(symbol),
+		Decimal:   string(decimal),
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+
+	return string(content), nil
+}
+
+/*
+	Approve allows the spender to withdraw from the calling client's token account
+	// the spender can withdraw multiple times if neccessary, up to the value amount
+	// this function triggers an Approval event
+
+	@param {Context} ctx the transaction context
+	@param {string} spender the spender address
+	@param {int} value the amount to approve
+
+	Return success interface or error
+*/
 func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, spender string, value int) error {
 
 	// Get ID of submitting client identity
@@ -414,7 +473,15 @@ func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, spe
 	return nil
 }
 
-// Allowance returns the amount still available for the spender to withdraw from the owner
+/*
+	Allowance returns the amount still available for the spender to withdraw from the owner
+
+	@param {Context} ctx the transaction context
+	@param {string} owner the owner address
+	@param {spender} spender the spender address
+
+	Returns int amount or error
+*/
 func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, owner string, spender string) (int, error) {
 
 	// Create allowanceKey
@@ -443,8 +510,16 @@ func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, o
 	return allowance, nil
 }
 
-// TransferFrom transfers the value amount from the "from" address to the "to" address
-// This function triggers a Transfer event
+/*
+	TransferFrom transfers the value amount from the "from" address to the "to" address
+	// this function triggers a Transfer event
+
+	@param {string} from the from client address
+	@param {string} to the to client address
+	@param {int} value the amount to transfer
+
+	Returns success interface or error
+*/
 func (s *SmartContract) TransferFrom(ctx contractapi.TransactionContextInterface, from string, to string, value int) error {
 
 	// Get ID of submitting client identity
@@ -506,6 +581,18 @@ func (s *SmartContract) TransferFrom(ctx contractapi.TransactionContextInterface
 
 // transferHelper is a helper function that transfers tokens from the "from" address to the "to" address
 // Dependant functions include Transfer and TransferFrom
+/*
+	Helper functions
+	//transferHelper is a helper function that transfers tokens from the "from" address to the "to" address
+	//dependant functions include Transfer and TransferFrom
+
+	@param {Context} ctx the transaction context
+	@oaram {string} from client address
+	@param {string} to the recipient address
+	@param {int} value the amount to transfer
+
+	Returns error
+*/
 func transferHelper(ctx contractapi.TransactionContextInterface, from string, to string, value int) error {
 
 	if value < 0 { // transfer of 0 is allowed in ERC-20, so just validate against negative amounts
