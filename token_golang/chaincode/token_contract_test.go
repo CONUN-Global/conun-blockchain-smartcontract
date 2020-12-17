@@ -34,8 +34,9 @@ func TestMint(t *testing.T) {
 	transactionContext.GetStubReturns(chaincodeStub)
 
 	mint := chaincode.SmartContract{}
-	err := mint.Mint(transactionContext, "aziz", 10)
+	resp, err := mint.Mint(transactionContext, "aziz", 10)
 	require.NoError(t, err)
+	fmt.Println(resp)
 
 }
 
