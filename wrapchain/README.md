@@ -1,0 +1,1 @@
+wrapchain SmartContract
