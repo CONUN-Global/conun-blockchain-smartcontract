@@ -114,3 +114,41 @@ func (s *SmartContract) ActionExists(ctx contractapi.TransactionContextInterface
 	}
 	return actionArr != nil, nil
 }
+
+/*
+	GetActionById returns saved action by id
+
+	@param {Context} ctx the transction context
+	@param {Int} actionId the id of the action
+
+
+	Returns sucess  action object or Error
+*/
+func (s *SmartContract) GetActionById(ctx contractapi.TransactionContextInterface, actionId int) (interface{}, error) {
+
+	actionJson, err := ctx.GetStub().GetState(strconv.Itoa(actionId))
+	if err != nil {
+		return nil, err
+	} else if actionJson == nil {
+		return nil, fmt.Errorf("The action with id: %d  does not exists", actionId)
+	}
+	return string(actionJson), nil
+
+}
+
+/*
+	GetUserActions returns saved actions by user
+
+	@param {Context} ctx the transction context
+	@param {String} user the wallet address
+*/
+func (s *SmartContract) GetUserActions(ctx contractapi.TransactionContextInterface, user string) (interface{}, error) {
+	userActionJson, err := ctx.GetStub().GetState(user)
+	if err != nil {
+		return nil, err
+	} else if userActionJson == nil {
+		return nil, fmt.Errorf("The user %s does not have any", user)
+	}
+
+	return string(userActionJson), nil
+}
