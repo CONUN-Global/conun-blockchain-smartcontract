@@ -62,23 +62,23 @@ func (s *SmartContract) ActionWrite(ctx contractapi.TransactionContextInterface,
 	if err = ctx.GetStub().PutState(strconv.Itoa(actionId), content); err != nil {
 		return err
 	}
-	var actionar []*Action
-	actionar = append(actionar, action)
 
-	if exist, err := s.ActionExists(ctx, user); err != nil {
+	if userArjson, err := ctx.GetStub().GetState(user); err != nil {
 		return err
-	} else if !exist {
+	} else if userArjson == nil {
+		var actionar []*Action
+		actionar = append(actionar, action)
 		userAr := &UserAr{
 			Actions: actionar,
 		}
-		content, err := json.Marshal(userAr)
+		contentAr, err := json.Marshal(userAr)
 		if err != nil {
 			return err
 		}
-		if err = ctx.GetStub().PutState(user, []byte(content)); err != nil {
+		if err = ctx.GetStub().PutState(user, []byte(contentAr)); err != nil {
 			return err
 		}
-	} else if exist {
+	} else {
 		var userAr UserAr
 		userArJson, err := ctx.GetStub().GetState(user)
 		if err != nil {
