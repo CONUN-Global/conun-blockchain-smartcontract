@@ -1,3 +1,9 @@
+/*
+*
+*		Copyright CONUN KOREA. ALL Rights Reserved
+*
+ */
+
 package main
 
 import (
