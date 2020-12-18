@@ -2,6 +2,7 @@ package chaincode
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -17,9 +18,8 @@ type Action struct {
 }
 
 //user struct
-type User struct {
-	User    string   `json:"user"`
-	Actions []Action `json:"actions"`
+type UserAr struct {
+	Actions []*Action `json:"actions"`
 }
 
 // SmartContract provides functions for transferring tokens between accounts
@@ -27,7 +27,27 @@ type SmartContract struct {
 	contractapi.Contract
 }
 
+/*
+	ActionWrite saves every user action on conun blockchain
+
+	@param {Context} ctx the transaction context
+	@param {String} user the user address
+	@param {Int} actionId the id of the action that user made
+	@param {Int} actionCode the code of the action
+	@param {String} ccid function name
+	@param {String} the transaction id of that action
+
+
+	returns Error
+
+*/
 func (s *SmartContract) ActionWrite(ctx contractapi.TransactionContextInterface, user string, actionId, actionCode int, ccid, txId string) error {
+
+	if exist, err := s.ActionExists(ctx, strconv.Itoa(actionId)); err != nil {
+		return err
+	} else if exist {
+		return fmt.Errorf("The action already exists: %d", actionId)
+	}
 
 	action := &Action{
 		ActionId:   actionId,
@@ -42,14 +62,55 @@ func (s *SmartContract) ActionWrite(ctx contractapi.TransactionContextInterface,
 	if err = ctx.GetStub().PutState(strconv.Itoa(actionId), content); err != nil {
 		return err
 	}
-	userByte, err := ctx.GetStub().GetState(user)
-	if err != nil {
-		return err
-	}
+	var actionar []*Action
+	actionar = append(actionar, action)
 
-	if userByte == nil {
-		err = ctx.GetStub().PutState(user, []byte(""))
+	if exist, err := s.ActionExists(ctx, user); err != nil {
+		return err
+	} else if !exist {
+		userAr := &UserAr{
+			Actions: actionar,
+		}
+		content, err := json.Marshal(userAr)
+		if err != nil {
+			return err
+		}
+		if err = ctx.GetStub().PutState(user, []byte(content)); err != nil {
+			return err
+		}
+	} else if exist {
+		var userAr UserAr
+		userArJson, err := ctx.GetStub().GetState(user)
+		if err != nil {
+			return err
+		}
+		if err = json.Unmarshal(userArJson, &userAr); err != nil {
+			return err
+		}
+
+		userAr.Actions = append(userAr.Actions, action)
+		contentAr, err := json.Marshal(userAr)
+		if err != nil {
+			return err
+		}
+		_ = ctx.GetStub().PutState(user, contentAr)
+
 	}
 
 	return nil
+}
+
+/*
+	ActionExists checks whether action exists in the blockchain
+
+	@param {String} id the id of the action
+
+	Retunrns Bool or Error
+*/
+func (s *SmartContract) ActionExists(ctx contractapi.TransactionContextInterface, id string) (bool, error) {
+	actionArr, err := ctx.GetStub().GetState(id)
+	if err != nil {
+		return false, fmt.Errorf("Failed to check action: %s", err)
+	}
+	return actionArr != nil, nil
 }
