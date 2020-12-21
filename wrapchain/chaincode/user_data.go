@@ -43,6 +43,7 @@ type SmartContract struct {
 */
 func (s *SmartContract) ActionWrite(ctx contractapi.TransactionContextInterface, user string, actionId, actionCode int, ccid, txId string) error {
 
+	// check for existance
 	if exist, err := s.ActionExists(ctx, strconv.Itoa(actionId)); err != nil {
 		return err
 	} else if exist {
