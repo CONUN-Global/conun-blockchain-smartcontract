@@ -8,13 +8,13 @@
 
 - `name` : `CONUN`
 - `symbol` : `CON`
-- `decimal` : (int)18
+- `decimal` : `(int)18`
 
 
 #### Structs
 
 - `Event`: `event provides an organized struct for emmitng events`
-- `Response` : `An organized Json struct response`
+- `Response` : `an organized Json struct response`
 - `Fcn` : `function response struct`
 - `Info` : `GetDetails function Response struct` 
 
@@ -23,6 +23,7 @@
 - `Init` : `(wallet address owner) => (JSON Object, error)`
 - `GetDetails` : `Query => (JSON Object, error)` 
 - `BalanceOf` : `Query (wallet address) => (int)`
+- `TotalSupply` : `Query => (int, error)`
 - `Transfer` : `(wallet address _from, wallet address _to, int amount) => (JSON Object, error)`
 - `Mint` : `(int amont) => (JSON Object, error)`
 - `Burn` : `(int amount) => (JSON Object, error)`
