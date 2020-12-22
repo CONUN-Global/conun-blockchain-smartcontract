@@ -1,22 +1,46 @@
 
-# ERC20Token:
+# ERC20 CON Token Smart Contract:
 
- The ERC-20 token smart contract demonstrates how to create and transfer Erc20 based tokens using account bassed model. There is an account for each participant that holds a balance tokens.
+ The ERC-20 CON Token smart contract used mainly in CONUN Private Blockchain as main asset. All rewards and payment are involved in with CON Token.
 
- * The <i>Init</i> transaction initializes Token details: name,symbol,decimal, owner.    
-   * Init(String: owner) --> Return Json or Error
-   * GetDetails() --> Return Json or Error
-   * BalanceOf(String: userAccount) --> Return Int balance or Error.
-  * A <i>Transfer</i> transaction debits the caller's account and creadits another account
-    * Transfer(string: From, String: To, Int: Amount) --> Return Json or Error.
-  * A <i>Mint</i> transaction creates tokens in the contract owner account.
-    * Mint(Int:Amount) Return Json or Error.
-  * A <i>Burn</i> transaction burnes tokens from the contract owner accout
-    * Burn(Int:Amount) Return Json or Error.
+
+#### Constants
+
+- `name` : `CONUN`
+- `symbol` : `CON`
+- `decimal` : (int)18
+
+
+#### Structs
+
+- `Event`: `event provides an organized struct for emmitng events`
+- `Response` : `An organized Json struct response`
+- `Fcn` : `function response struct`
+- `Info` : `GetDetails function Response struct` 
+
+
+#### Methods
+- `Init` : `(wallet address owner) => (JSON Object, error)`
+- `GetDetails` : `Query => (JSON Object, error)` 
+- `BalanceOf` : `Query (wallet address) => (int)`
+- `Transfer` : `(wallet address _from, wallet address _to, int amount) => (JSON Object, error)`
+- `Mint` : `(int amont) => (JSON Object, error)`
+- `Burn` : `(int amount) => (JSON Object, error)`
+- `TransferFrom` : `(wallet address from, wallet address to, amount int) => (bool)`
+- `Allowance` : `(wallet address owner, wallet address spender) => (bool)`
+- `Approve` : `(wallet address user, amount int) => (bool)`
+
+
+#### Inner Methods
+
+- `transferHelper` : `transfer function extension`
+
+
+#### Events
+
+- `Transfer(wallet address from, wallet address to, amount int)`
   
 
-<br/>
-<br/>
 
 
 

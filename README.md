@@ -12,7 +12,7 @@
 You can use CONUN Blockchain deployed Smart Contracts to get started with CONUN Distributed Supercomputing Platform. You can explore important features and use as a reference to build applications that can interact with blockchain networks. To know more about CONUN visit [CONUN homepage](https://conun.io/)
 
 
-## Getting started with SmartContracts:
+## Getting started with Smart Contracts:
 
 
 | **Smart Contract** | **Description** | **Smart Contract Language** |
