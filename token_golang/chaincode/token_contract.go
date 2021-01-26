@@ -156,6 +156,11 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 		return nil, err
 	}
 
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), []byte(strconv.Itoa(amount)))
+	if err != nil {
+		return nil, err
+	}
+
 	// Update the totalSupply
 	totalSupplyBytes, err := ctx.GetStub().GetState(totalSupplyKey)
 	if err != nil {
@@ -697,6 +702,11 @@ func transferHelper(ctx contractapi.TransactionContextInterface, from string, to
 		return err
 	}
 
+
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), []byte(strconv.Itoa(value)))
+	if err != nil {
+		return err
+	}
 	log.Printf("client %s balance updated from %d to %d", from, fromCurrentBalance, fromUpdatedBalance)
 	log.Printf("recipient %s balance updated from %d to %d", to, toCurrentBalance, toUpdatedBalance)
 
