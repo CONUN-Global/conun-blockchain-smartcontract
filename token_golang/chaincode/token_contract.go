@@ -66,6 +66,7 @@ type Info struct {
 	TokenName string `json:"TokenName"`
 	Symbol    string `json:"Symbol"`
 	Decimal   string `json:"Decimal"`
+	TotalSupply int `json:"TotalSupply"`
 }
 
 /*
@@ -470,6 +471,7 @@ func (s *SmartContract) GetDetails(ctx contractapi.TransactionContextInterface) 
 	tokenName, err := ctx.GetStub().GetState(namePrefix)
 	symbol, err := ctx.GetStub().GetState(symbolPrefix)
 	decimal, err := ctx.GetStub().GetState(decimalPrefix)
+	totalSupplyBytes, err := ctx.GetStub().GetState(totalSupplyKey)
 
 	if err != nil {
 		return nil, err
@@ -477,12 +479,20 @@ func (s *SmartContract) GetDetails(ctx contractapi.TransactionContextInterface) 
 	if decimal == nil || tokenName == nil || symbol == nil || deployer == nil {
 		return nil, fmt.Errorf("Init is not declared %s,%s,%s", string(decimal), string(tokenName), string(deployer))
 	}
+	var totalSupply int 
+	if totalSupplyBytes == nil {
+		totalSupply = 0
+	} else {
+		totalSupply, _ = strconv.Atoi(string(totalSupplyBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
+	}
+
 
 	res := &Info{
 		Owner:     string(deployer),
 		TokenName: string(tokenName),
 		Symbol:    string(symbol),
 		Decimal:   string(decimal),
+		TotalSupply: totalSupply,
 	}
 	content, err := json.Marshal(res)
 	if err != nil {
