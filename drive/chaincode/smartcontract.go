@@ -146,7 +146,7 @@ func (s *SmartContract) DislikeContent(ctx contractapi.TransactionContextInterfa
 	return txID, nil
 }
 
-func (s *SmartContract) DownloadCount(ctx contractapi.TransactionContextInterface, ccid, walletid string) (interface{}, error) {
+func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterface, ccid, walletid string) (interface{}, error) {
 
 	exists, err := s.FileExists(ctx, ccid)
 	if err != nil {
@@ -180,7 +180,7 @@ func (s *SmartContract) FileExists(ctx contractapi.TransactionContextInterface, 
 	return authorAdr != nil, nil
 }
 
-func (s *SmartContract) getTotatLikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
+func (s *SmartContract) GetTotatLikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
 
 	//get all deltas for the variable
 
@@ -211,7 +211,7 @@ func (s *SmartContract) getTotatLikes(ctx contractapi.TransactionContextInterfac
 	return finalVal, nil
 }
 
-func (s *SmartContract) getTotalDislikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
+func (s *SmartContract) GetTotalDislikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
 
 	//get all deltas for the variable
 
@@ -242,7 +242,7 @@ func (s *SmartContract) getTotalDislikes(ctx contractapi.TransactionContextInter
 	return finalVal, nil
 }
 
-func (s *SmartContract) getTotalDownloads(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
+func (s *SmartContract) GetTotalDownloads(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
 
 	//get all deltas for the variable
 
