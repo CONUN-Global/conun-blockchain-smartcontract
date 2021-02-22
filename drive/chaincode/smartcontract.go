@@ -1,8 +1,10 @@
 package chaincode
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -11,22 +13,15 @@ type SmartContract struct {
 	contractapi.Contract
 }
 
-// initlialize file stuct
-// type FileData struct {
-// 	ID        string   `json:"ID"`        // id of the file
-// 	Author    string   `json:"Author"`    // requester wallet id
-// 	Path      string   `json:"Path"`      // ipfs file path
-// 	State     int      `json:"State"`     // state of the file
-// 	Period    int      `json:"Period"`    // deployment period of the file
-// 	RentPrice int      `json:"RentPrice"` // price of the space for the file "paid to provider"
-// 	Price     int      `json:"Price"`     // price of the file for clients "paid to author"
-// 	Provider  string   `json:"Provider"`  // provider wallet address
-// 	Clients   []string `json:"Clients"`   // clients wallet addresses
-// 	TxID      string   `json:"TxID"`      // transcation id
-// 	Timestamp string   `json:"Timestamp"` // timestamp of transaction
-// }
+//initlialize file stuct
+type FileData struct {
+	Author    string `json:"Author"`    // requester wallet id
+	State     int    `json:"State"`     // state of the file
+	TxID      string `json:"TxID"`      // transcation id
+	Timestamp string `json:"Timestamp"` // timestamp of transaction
+}
 
-const allowancePrefix = "allowance"
+const allowancePrefix = "allowance~ccid~user"
 const likePrefix = "like~ccid~user~txId"
 const dislikePrefix = "dislike~ccid~user~txId"
 const downloadCount = "ccid~user~txId"
@@ -40,11 +35,11 @@ type OrderFile struct {
 
 // initialize response
 type Response struct {
-	Fcn       string `json:"Fcn"`       // function name
-	ID        string `json:"ID"`        // file id
-	Success   bool   `json:"Success"`   // true if success
-	TxID      string `json:"TxID"`      // transction id
-	Timestamp string `json:"Timestamp"` // timestamp of the transaction
+	Fcn       string               `json:"Fcn,omitempty"`       // function name
+	Success   bool                 `json:"Success,omitempty"`   // true if success
+	TxID      string               `json:"TxID,omitempty"`      // transction id
+	Timestamp *timestamp.Timestamp `json:"Timestamp,omitempty"` // timestamp of the transaction
+	Value     int                  `json:"Value,omitempty"`     // value of dislike of like, count
 }
 
 /**
@@ -54,35 +49,60 @@ type Response struct {
  * @param {String} id the string id  of the file
  * @param {String} author The author of the file aka 'Requestor wallet.id'
  */
-func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, ccid, author string) error {
+func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, ccid, author string) (interface{}, error) {
 	// check for file existance
 	if exists, err := s.FileExists(ctx, ccid); err != nil {
-		return err
+		return nil, err
 	} else if exists {
-		return fmt.Errorf("The file %s already exists", ccid)
+		return nil, fmt.Errorf("The file %s already exists", ccid)
 	}
-
-	return ctx.GetStub().PutState(ccid, []byte(author))
+	err := ctx.GetStub().PutState(ccid, []byte(author))
+	if err != nil {
+		return nil, err
+	}
+	txTime, _ := ctx.GetStub().GetTxTimestamp()
+	res := &Response{
+		Success:   true,
+		Fcn:       "CreateFile",
+		TxID:      ctx.GetStub().GetTxID(),
+		Timestamp: txTime,
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return string(content), nil
 
 }
 
-func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, ccid, author, spenderAdr string) error {
+func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, ccid, author, spenderAdr string) (interface{}, error) {
 	ownerByte, err := ctx.GetStub().GetState(ccid)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if string(ownerByte) != author {
-		return fmt.Errorf("owner are wrong address")
+		return nil, fmt.Errorf("owner are wrong address")
 	}
 	allowanceKey, err := ctx.GetStub().CreateCompositeKey(allowancePrefix, []string{ccid, spenderAdr})
 	if err != nil {
-		return fmt.Errorf("failed to create the composite key for prefix")
+		return nil, fmt.Errorf("failed to create the composite key for prefix")
 	}
-	err = ctx.GetStub().PutState(allowanceKey, []byte{0x00})
+	err = ctx.GetStub().PutState(allowanceKey, []byte(spenderAdr))
 	if err != nil {
-		return fmt.Errorf("error to update state of the smart contract")
+		return nil, fmt.Errorf("error to update state of the smart contract")
 	}
-	return nil
+	txTime, _ := ctx.GetStub().GetTxTimestamp()
+	res := &Response{
+		Success:   true,
+		Fcn:       "Approve",
+		TxID:      ctx.GetStub().GetTxID(),
+		Timestamp: txTime,
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return content, nil
 
 }
 
@@ -120,8 +140,18 @@ func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface,
 	if err != nil {
 		return nil, fmt.Errorf("error while writing data")
 	}
-
-	return txID, nil
+	txTime, _ := ctx.GetStub().GetTxTimestamp()
+	res := &Response{
+		Success:   true,
+		Fcn:       "LikeContent",
+		TxID:      ctx.GetStub().GetTxID(),
+		Timestamp: txTime,
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return string(content), nil
 
 }
 
@@ -142,8 +172,18 @@ func (s *SmartContract) DislikeContent(ctx contractapi.TransactionContextInterfa
 	if err != nil {
 		return nil, fmt.Errorf("error while writing data")
 	}
-
-	return txID, nil
+	txTime, _ := ctx.GetStub().GetTxTimestamp()
+	res := &Response{
+		Success:   true,
+		Fcn:       "DislikeContent",
+		TxID:      ctx.GetStub().GetTxID(),
+		Timestamp: txTime,
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return string(content), nil
 }
 
 func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterface, ccid, walletid string) (interface{}, error) {
@@ -163,8 +203,18 @@ func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterfa
 	if err != nil {
 		return nil, fmt.Errorf("error while writing data")
 	}
-
-	return txID, nil
+	txTime, _ := ctx.GetStub().GetTxTimestamp()
+	res := &Response{
+		Success:   true,
+		Fcn:       "CountDownloads",
+		TxID:      ctx.GetStub().GetTxID(),
+		Timestamp: txTime,
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return string(content), nil
 }
 
 /* check file exists
@@ -207,8 +257,16 @@ func (s *SmartContract) GetTotatLikes(ctx contractapi.TransactionContextInterfac
 
 		finalVal += 1
 	}
-
-	return finalVal, nil
+	res := &Response{
+		Success: true,
+		Fcn:     "GetTotatLikes",
+		Value:   finalVal,
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return string(content), nil
 }
 
 func (s *SmartContract) GetTotalDislikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
@@ -239,7 +297,16 @@ func (s *SmartContract) GetTotalDislikes(ctx contractapi.TransactionContextInter
 		finalVal += 1
 	}
 
-	return finalVal, nil
+	res := &Response{
+		Success: true,
+		Fcn:     "GetTotalDislikes",
+		Value:   finalVal,
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return string(content), nil
 }
 
 func (s *SmartContract) GetTotalDownloads(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
@@ -270,5 +337,14 @@ func (s *SmartContract) GetTotalDownloads(ctx contractapi.TransactionContextInte
 		finalVal += 1
 	}
 
-	return finalVal, nil
+	res := &Response{
+		Success: true,
+		Fcn:     "GetTotalDownloads",
+		Value:   finalVal,
+	}
+	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+	return string(content), nil
 }
