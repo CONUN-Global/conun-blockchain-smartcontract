@@ -35,52 +35,84 @@ func TestCreatFile(t *testing.T) {
 	transactionContext.GetStubReturns(chaincodeStub)
 
 	createFile := chaincode.SmartContract{}
-	err := createFile.CreateFile(transactionContext, "someId1", "aziz", "", 1, 1, 1, 1, "")
+	res, err := createFile.CreateFile(transactionContext, "someId1", "aziz")
+	fmt.Println("should be nill", res)
 	require.NoError(t, err)
 
 	chaincodeStub.GetStateReturns([]byte{}, nil)
-	err = createFile.CreateFile(transactionContext, "someId1", "", "", 0, 0, 0, 0, "")
-	require.EqualError(t, err, "the file with with someId1 is already exists")
+	res, err = createFile.CreateFile(transactionContext, "someId1", "aziz")
+	fmt.Println(res)
+	require.EqualError(t, err, "The file someId1 already exists")
 
 }
-func TestOrderFileFromAuthor(t *testing.T) {
+
+func TestApprove(t *testing.T) {
 	chaincodeStub := &mocks.ChaincodeStub{}
 	transactionContext := &mocks.TransactionContext{}
 	transactionContext.GetStubReturns(chaincodeStub)
 
-	orderFileFromAuthor := chaincode.SmartContract{}
-	err := orderFileFromAuthor.OrderFileFromAuthor(transactionContext, "someId", "Sara")
-	//require.NoError(t, err, resp)
-	fmt.Println(err)
+	approve := chaincode.SmartContract{}
+	res, err := approve.Approve(transactionContext, "someId", "", "secondUser")
+	require.NoError(t, err, res)
+
+	chaincodeStub.GetStateReturns([]byte{}, nil)
+	res, err = approve.Approve(transactionContext, "someId", "User1", "secondUser")
+	require.EqualError(t, err, "owner are wrong address , User1")
 }
 
-func TestUpdateFileProgress(t *testing.T) {
+func TestAllowance(t *testing.T) {
 	chaincodeStub := &mocks.ChaincodeStub{}
 	transactionContext := &mocks.TransactionContext{}
 	transactionContext.GetStubReturns(chaincodeStub)
 
-	chaincodeStub.GetStateReturns(err, nil)
-	fileContract := chaincode.SmartContract{}
-	check, err := fileContract.UpdateFileProgress(transactionContext, "", "", 0)
-	require.NoError(t, err, check)
+	allowance := chaincode.SmartContract{}
+	res, err := allowance.Allowance(transactionContext, "someid", "azzi")
+	require.NoError(t, err, res)
+
+	chaincodeStub.GetStateReturns([]byte{}, nil)
+	res, err = allowance.Allowance(transactionContext, "someid", "azzi")
+	require.EqualError(t, err, "allowance is empty")
+
 }
 
-func TestFileExists(t *testing.T) {
+func TestLikeContent(t *testing.T) {
 	chaincodeStub := &mocks.ChaincodeStub{}
 	transactionContext := &mocks.TransactionContext{}
 	transactionContext.GetStubReturns(chaincodeStub)
 
-	fileExists := &chaincode.SmartContract{}
-	_, err := fileExists.FileExists(transactionContext, "someId1")
-	require.NoError(t, err)
+	likeContent := chaincode.SmartContract{}
+	res, err := likeContent.LikeContent(transactionContext, "someid", "walletd")
+	require.NoError(t, err, res)
+
+	chaincodeStub.GetStateReturns([]byte{}, nil)
+	res, err = likeContent.LikeContent(transactionContext, "", "wallet")
+	require.EqualError(t, err, "error getting file doesnt exists")
 }
 
-func TestCancelFileProgress(t *testing.T) {
+func TestDislikeContent(t *testing.T) {
 	chaincodeStub := &mocks.ChaincodeStub{}
 	transactionContext := &mocks.TransactionContext{}
 	transactionContext.GetStubReturns(chaincodeStub)
 
-	cancelFileProgress := &chaincode.SmartContract{}
-	_, err := cancelFileProgress.CancelFileProgress(transactionContext, "someId1,", "", 0)
-	require.NoError(t, err)
+	dislikeContent := chaincode.SmartContract{}
+	res, err := dislikeContent.DislikeContent(transactionContext, "someid", "walletd")
+	require.NoError(t, err, res)
+
+	chaincodeStub.GetStateReturns([]byte{}, nil)
+	res, err = dislikeContent.DislikeContent(transactionContext, "", "wallet")
+	require.EqualError(t, err, "error getting file doesnt exists")
+}
+
+func TestCountDownloads(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	countDownloads := chaincode.SmartContract{}
+	res, err := countDownloads.CountDownloads(transactionContext, "someid", "walletd")
+	require.NoError(t, err, res)
+
+	chaincodeStub.GetStateReturns([]byte{}, nil)
+	res, err = countDownloads.CountDownloads(transactionContext, "", "wallet")
+	require.EqualError(t, err, "error getting file doesnt exists")
 }

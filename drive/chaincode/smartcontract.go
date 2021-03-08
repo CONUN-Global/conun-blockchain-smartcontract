@@ -81,7 +81,7 @@ func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, cci
 		return nil, err
 	}
 	if string(ownerByte) != author {
-		return nil, fmt.Errorf("owner are wrong address")
+		return nil, fmt.Errorf("owner are wrong address %s, %s", string(ownerByte), author)
 	}
 	allowanceKey, err := ctx.GetStub().CreateCompositeKey(allowancePrefix, []string{ccid, spenderAdr})
 	if err != nil {
