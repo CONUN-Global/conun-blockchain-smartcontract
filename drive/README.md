@@ -13,13 +13,13 @@
 
 
 #### Methods
-- `CreateFile` : `(wallet address, fileData) => (JSON Object, error)`
-- `UpdateFileProgress` : `(string fileID, wallet address, int state) => (JSON Object, error)` 
-- `FileExists` : `Query (string fileID) => (bool)`
-- `CancelFileProgress` : `(string fileID, wallet address, int state) => (JSON Object, error)`
-- `OrderFileFromAuthor` : `(wallet address, string fileID) => (JSON Object, error)`
-- `GetAllFiles` : `Query => (JSON Object, error)`
-- `DeleteFile` : `(string fileID, wallet address) => (JSON Object, error)`
+- `CreateFile` : `(ipfsHash string, author wallet address) => (JSON Object, error)`
+- `Approve` : `(ipfsHash string, author,spenderAdr wallet address) => (JSON Object, error)` 
+- `Allowance` : `Query (ipfsHash string, spender wallet address) => (JSON Object, error)`
+- `LikeContent` : `(ipfsHash string, wallet address) => (JSON Object, error)`
+- `CountDownloads` : `(ipfsHash string, wallet address) => (JSON Object, error)`
+- `GetTotatLikes` : `(ipfsHash string) => (JSON Object, error)`
+- `GetTotalDownloads`:`(ipfsHash string) => (JSON Object, error)`
 
 
   
