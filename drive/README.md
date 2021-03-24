@@ -18,7 +18,7 @@
 - `Allowance` : `Query (ipfsHash string, spender wallet address) => (JSON Object, error)`
 - `LikeContent` : `(ipfsHash string, wallet address) => (JSON Object, error)`
 - `CountDownloads` : `(ipfsHash string, wallet address) => (JSON Object, error)`
-- `GetTotatLikes` : `(ipfsHash string) => (JSON Object, error)`
+- `GetTotalLikes` : `(ipfsHash string) => (JSON Object, error)`
 - `GetTotalDownloads`:`(ipfsHash string) => (JSON Object, error)`
 
 

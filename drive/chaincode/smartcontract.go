@@ -42,6 +42,15 @@ type Response struct {
 	Value     int                  `json:"Value,omitempty"`     // value of dislike of like, count
 }
 
+// txDetails struct
+// Tx Details struct
+type DetailsTx struct {
+	From   string `json:"From"`
+	To     string `json:"To"`
+	Action string `json:"Action"`
+	Value  string `json:"Value"`
+}
+
 /**
  * function: CreateFile
  *
@@ -68,6 +77,19 @@ func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, 
 		Timestamp: txTime,
 	}
 	content, err := json.Marshal(res)
+	if err != nil {
+		return nil, err
+	}
+
+	details := &DetailsTx{
+		From:   author,
+		To:     "Drive",
+		Action: "Create",
+		Value:  ccid,
+	}
+
+	dtl, err := json.Marshal(details)
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +124,19 @@ func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, cci
 	if err != nil {
 		return nil, err
 	}
-	return content, nil
+	details := &DetailsTx{
+		From:   author,
+		To:     "Drive",
+		Action: "Approve",
+		Value:  spenderAdr,
+	}
+
+	dtl, err := json.Marshal(details)
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
+	if err != nil {
+		return nil, err
+	}
+	return string(content), nil
 
 }
 
@@ -151,39 +185,21 @@ func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface,
 	if err != nil {
 		return nil, err
 	}
-	return string(content), nil
 
-}
+	details := &DetailsTx{
+		From:   walletid,
+		To:     "Drive",
+		Action: "Like",
+		Value:  ccid,
+	}
 
-func (s *SmartContract) DislikeContent(ctx contractapi.TransactionContextInterface, ccid, walletid string) (interface{}, error) {
-
-	exists, err := s.FileExists(ctx, ccid)
-	if err != nil {
-		return nil, fmt.Errorf("error checking file")
-	} else if !exists {
-		return nil, fmt.Errorf("error getting file doesnt exists")
-	}
-	txID := ctx.GetStub().GetTxID()
-	contentDislikeKey, err := ctx.GetStub().CreateCompositeKey(dislikePrefix, []string{ccid, walletid, txID})
-	if err != nil {
-		return nil, fmt.Errorf("getting error while creating like key")
-	}
-	err = ctx.GetStub().PutState(contentDislikeKey, []byte{0x00})
-	if err != nil {
-		return nil, fmt.Errorf("error while writing data")
-	}
-	txTime, _ := ctx.GetStub().GetTxTimestamp()
-	res := &Response{
-		Success:   true,
-		Fcn:       "DislikeContent",
-		TxID:      ctx.GetStub().GetTxID(),
-		Timestamp: txTime,
-	}
-	content, err := json.Marshal(res)
+	dtl, err := json.Marshal(details)
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
 	if err != nil {
 		return nil, err
 	}
 	return string(content), nil
+
 }
 
 func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterface, ccid, walletid string) (interface{}, error) {
@@ -214,6 +230,18 @@ func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterfa
 	if err != nil {
 		return nil, err
 	}
+	details := &DetailsTx{
+		From:   walletid,
+		To:     "Drive",
+		Action: "Download",
+		Value:  ccid,
+	}
+
+	dtl, err := json.Marshal(details)
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
+	if err != nil {
+		return nil, err
+	}
 	return string(content), nil
 }
 
@@ -230,7 +258,7 @@ func (s *SmartContract) FileExists(ctx contractapi.TransactionContextInterface, 
 	return authorAdr != nil, nil
 }
 
-func (s *SmartContract) GetTotatLikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
+func (s *SmartContract) GetTotalLikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
 
 	//get all deltas for the variable
 
@@ -259,47 +287,7 @@ func (s *SmartContract) GetTotatLikes(ctx contractapi.TransactionContextInterfac
 	}
 	res := &Response{
 		Success: true,
-		Fcn:     "GetTotatLikes",
-		Value:   finalVal,
-	}
-	content, err := json.Marshal(res)
-	if err != nil {
-		return nil, err
-	}
-	return string(content), nil
-}
-
-func (s *SmartContract) GetTotalDislikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
-
-	//get all deltas for the variable
-
-	deltaResultIterator, deltaErr := ctx.GetStub().GetStateByPartialCompositeKey(dislikePrefix, []string{ccid})
-	if deltaErr != nil {
-		return nil, fmt.Errorf("error occured while getting file")
-	}
-
-	defer deltaResultIterator.Close()
-
-	if !deltaResultIterator.HasNext() {
-		return nil, fmt.Errorf("error getting file empty")
-	}
-
-	var finalVal int
-	var i int
-
-	for i = 0; deltaResultIterator.HasNext(); i++ {
-		//get the next row
-		_, nextErr := deltaResultIterator.Next()
-		if nextErr != nil {
-			return nil, fmt.Errorf(nextErr.Error())
-		}
-
-		finalVal += 1
-	}
-
-	res := &Response{
-		Success: true,
-		Fcn:     "GetTotalDislikes",
+		Fcn:     "GetTotalLikes",
 		Value:   finalVal,
 	}
 	content, err := json.Marshal(res)

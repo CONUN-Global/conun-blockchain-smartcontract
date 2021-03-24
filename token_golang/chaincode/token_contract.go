@@ -62,11 +62,19 @@ type Fcn struct {
 
 // info response struct
 type Info struct {
-	Owner     string `json:"Owner"`
-	TokenName string `json:"TokenName"`
-	Symbol    string `json:"Symbol"`
-	Decimal   string `json:"Decimal"`
-	TotalSupply int `json:"TotalSupply"`
+	Owner       string `json:"Owner"`
+	TokenName   string `json:"TokenName"`
+	Symbol      string `json:"Symbol"`
+	Decimal     string `json:"Decimal"`
+	TotalSupply int    `json:"TotalSupply"`
+}
+
+// Tx Details struct
+type DetailsTx struct {
+	From   string `json:"From"`
+	To     string `json:"To"`
+	Action string `json:"Action"`
+	Value  string `json:"Value"`
 }
 
 /*
@@ -396,6 +404,7 @@ func (s *SmartContract) BalanceOf(ctx contractapi.TransactionContextInterface, a
 	Returns int value of the balance or error
 
 */
+
 func (s *SmartContract) ClientAccountBalance(ctx contractapi.TransactionContextInterface) (int, error) {
 
 	// Get ID of submitting client identity
@@ -479,19 +488,18 @@ func (s *SmartContract) GetDetails(ctx contractapi.TransactionContextInterface) 
 	if decimal == nil || tokenName == nil || symbol == nil || deployer == nil {
 		return nil, fmt.Errorf("Init is not declared %s,%s,%s", string(decimal), string(tokenName), string(deployer))
 	}
-	var totalSupply int 
+	var totalSupply int
 	if totalSupplyBytes == nil {
 		totalSupply = 0
 	} else {
 		totalSupply, _ = strconv.Atoi(string(totalSupplyBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
 	}
 
-
 	res := &Info{
-		Owner:     string(deployer),
-		TokenName: string(tokenName),
-		Symbol:    string(symbol),
-		Decimal:   string(decimal),
+		Owner:       string(deployer),
+		TokenName:   string(tokenName),
+		Symbol:      string(symbol),
+		Decimal:     string(decimal),
 		TotalSupply: totalSupply,
 	}
 	content, err := json.Marshal(res)
@@ -712,8 +720,15 @@ func transferHelper(ctx contractapi.TransactionContextInterface, from string, to
 		return err
 	}
 
+	details := &DetailsTx{
+		From:   from,
+		To:     to,
+		Action: "Transfer",
+		Value:  strconv.Itoa(value),
+	}
 
-	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), []byte(strconv.Itoa(value)))
+	dtl, err := json.Marshal(details)
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
 	if err != nil {
 		return err
 	}
