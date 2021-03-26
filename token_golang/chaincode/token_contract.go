@@ -37,10 +37,10 @@ type SmartContract struct {
 }
 
 // event provides an organized struct for emitting events
-type event struct {
-	from  string
-	to    string
-	value int
+type Event struct {
+	From  string `json:"From"`
+	To    string `json:"To"`
+	Value int    `json:"Value"`
 }
 
 // respnse struct
@@ -193,7 +193,8 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 	}
 
 	// Emit the Transfer event
-	transferEvent := event{"0x0", minter, amount}
+	transferEvent := &Event{
+		From: "0x0", To: minter, Value: amount}
 	transferEventJSON, err := json.Marshal(transferEvent)
 	if err != nil {
 		return nil, fmt.Errorf("failed to obtain JSON encoding: %v", err)
@@ -298,7 +299,7 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 	}
 
 	// Emit the Transfer event
-	transferEvent := event{minter, "0x0", amount}
+	transferEvent := &Event{From: minter, To: "0x0", Value: amount}
 	transferEventJSON, err := json.Marshal(transferEvent)
 	if err != nil {
 		return nil, fmt.Errorf("failed to obtain JSON encoding: %v", err)
@@ -352,7 +353,7 @@ func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, fr
 	}
 
 	// Emit the Transfer event
-	transferEvent := event{from, recipient, amount}
+	transferEvent := &Event{From: from, To: recipient, Value: amount}
 	transferEventJSON, err := json.Marshal(transferEvent)
 	if err != nil {
 		return nil, fmt.Errorf("failed to obtain JSON encoding: %v", err)
@@ -542,7 +543,7 @@ func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, spe
 	}
 
 	// Emit the Approval event
-	approvalEvent := event{owner, spender, value}
+	approvalEvent := &Event{From: owner, To: spender, Value: value}
 	approvalEventJSON, err := json.Marshal(approvalEvent)
 	if err != nil {
 		return fmt.Errorf("failed to obtain JSON encoding: %v", err)
@@ -646,7 +647,7 @@ func (s *SmartContract) TransferFrom(ctx contractapi.TransactionContextInterface
 	}
 
 	// Emit the Transfer event
-	transferEvent := event{from, to, value}
+	transferEvent := &Event{From: from, To: to, Value: value}
 	transferEventJSON, err := json.Marshal(transferEvent)
 	if err != nil {
 		return fmt.Errorf("failed to obtain JSON encoding: %v", err)

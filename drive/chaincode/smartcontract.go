@@ -21,11 +21,6 @@ type FileData struct {
 	Timestamp string `json:"Timestamp"` // timestamp of transaction
 }
 
-const allowancePrefix = "allowance~ccid~user"
-const likePrefix = "like~ccid~user~txId"
-const dislikePrefix = "dislike~ccid~user~txId"
-const downloadCount = "ccid~user~txId"
-
 type OrderFile struct {
 	ID     string `json:"ID"`
 	Author string `json:"Author"`
@@ -50,6 +45,17 @@ type DetailsTx struct {
 	Action string `json:"Action"`
 	Value  string `json:"Value"`
 }
+
+type Event struct {
+	UserID    int                  `json:"UserID"`
+	ContentID int                  `json:"ContentID"`
+	Timestamp *timestamp.Timestamp `json:"Timestamp"`
+}
+
+const allowancePrefix = "allowance~ccid~user"
+const likePrefix = "like~ccid~user~txId"
+const dislikePrefix = "dislike~ccid~user~txId"
+const downloadCount = "ccid~user~txId"
 
 /**
  * function: CreateFile
@@ -157,7 +163,7 @@ func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, c
 	return string(allowanceBytes), nil
 }
 
-func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface, ccid, walletid string) (interface{}, error) {
+func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []int) (interface{}, error) {
 
 	exists, err := s.FileExists(ctx, ccid)
 	if err != nil {
@@ -192,6 +198,16 @@ func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface,
 		Action: "Like",
 		Value:  ccid,
 	}
+	// set event
+	likeEvent := &Event{UserID: args[0], ContentID: args[1], Timestamp: txTime}
+	likeEventJSON, err := json.Marshal(likeEvent)
+	if err != nil {
+		return nil, fmt.Errorf("failed to obtain JSON encoding: %v", err)
+	}
+	err = ctx.GetStub().SetEvent("UserLikes", likeEventJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set event: %v", err)
+	}
 
 	dtl, err := json.Marshal(details)
 	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
@@ -202,7 +218,7 @@ func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface,
 
 }
 
-func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterface, ccid, walletid string) (interface{}, error) {
+func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []int) (interface{}, error) {
 
 	exists, err := s.FileExists(ctx, ccid)
 	if err != nil {
@@ -235,6 +251,17 @@ func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterfa
 		To:     "Drive",
 		Action: "Download",
 		Value:  ccid,
+	}
+
+	// set event
+	downloadEvent := &Event{UserID: args[0], ContentID: args[1], Timestamp: txTime}
+	downloadEventJSON, err := json.Marshal(downloadEvent)
+	if err != nil {
+		return nil, fmt.Errorf("failed to obtain JSON encoding: %v", err)
+	}
+	err = ctx.GetStub().SetEvent("UserDownloads", downloadEventJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set event: %v", err)
 	}
 
 	dtl, err := json.Marshal(details)
