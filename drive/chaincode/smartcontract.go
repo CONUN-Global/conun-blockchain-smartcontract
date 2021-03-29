@@ -64,18 +64,41 @@ const downloadCount = "ccid~user~txId"
  * @param {String} id the string id  of the file
  * @param {String} author The author of the file aka 'Requestor wallet.id'
  */
-func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, ccid, author string) (interface{}, error) {
+func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, author string, args []string) (interface{}, error) {
+
+	if len(args) > 1 {
+		return nil, fmt.Errorf("Empty args len Error")
+	}
 	// check for file existance
-	if exists, err := s.FileExists(ctx, ccid); err != nil {
+
+	if exists, err := s.FileExists(ctx, args[0]); err != nil {
 		return nil, err
 	} else if exists {
-		return nil, fmt.Errorf("The file %s already exists", ccid)
+		return nil, fmt.Errorf("The file %s already exists", args[0])
 	}
-	err := ctx.GetStub().PutState(ccid, []byte(author))
+	txTime, _ := ctx.GetStub().GetTxTimestamp()
+	err := ctx.GetStub().PutState(args[0], []byte(author))
 	if err != nil {
 		return nil, err
 	}
-	txTime, _ := ctx.GetStub().GetTxTimestamp()
+	if len(args) == 2 {
+		err := ctx.GetStub().PutState(args[1], []byte(args[0]))
+		if err != nil {
+			return nil, err
+		}
+	}
+	details := &DetailsTx{
+		From:   author,
+		To:     "Drive",
+		Action: "Create",
+		Value:  args[0],
+	}
+
+	dtl, err := json.Marshal(details)
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
+	if err != nil {
+		return nil, err
+	}
 	res := &Response{
 		Success:   true,
 		Fcn:       "CreateFile",
@@ -87,31 +110,23 @@ func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, 
 		return nil, err
 	}
 
-	details := &DetailsTx{
-		From:   author,
-		To:     "Drive",
-		Action: "Create",
-		Value:  ccid,
-	}
-
-	dtl, err := json.Marshal(details)
-	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
-	if err != nil {
-		return nil, err
-	}
 	return string(content), nil
 
 }
 
-func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, ccid, author, spenderAdr string) (interface{}, error) {
-	ownerByte, err := ctx.GetStub().GetState(ccid)
+func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, ccidcode, author, spenderAdr string) (interface{}, error) {
+	ccidByte, err := ctx.GetStub().GetState(ccidcode)
+	if err != nil {
+		return nil, err
+	}
+	ownerByte, err := ctx.GetStub().GetState(string(ccidByte))
 	if err != nil {
 		return nil, err
 	}
 	if string(ownerByte) != author {
 		return nil, fmt.Errorf("owner are wrong address %s, %s", string(ownerByte), author)
 	}
-	allowanceKey, err := ctx.GetStub().CreateCompositeKey(allowancePrefix, []string{ccid, spenderAdr})
+	allowanceKey, err := ctx.GetStub().CreateCompositeKey(allowancePrefix, []string{ccidcode, spenderAdr})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the composite key for prefix")
 	}
@@ -146,21 +161,22 @@ func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, cci
 
 }
 
-func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, ccid, spender string) (interface{}, error) {
+func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, ccidcode, spender string) (interface{}, error) {
 
-	allowanceKey, err := ctx.GetStub().CreateCompositeKey(allowancePrefix, []string{ccid, spender})
+	allowanceKey, err := ctx.GetStub().CreateCompositeKey(allowancePrefix, []string{ccidcode, spender})
 	if err != nil {
-		return nil, fmt.Errorf("error creating composite key")
+		return false, fmt.Errorf("error creating composite key")
 	}
 	allowanceBytes, err := ctx.GetStub().GetState(allowanceKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read allowance for ")
+		return false, fmt.Errorf("failed to read allowance for ")
 	}
 
 	if allowanceBytes == nil {
-		return nil, fmt.Errorf("allowance is empty")
+		return false, fmt.Errorf("allowance is empty")
 	}
-	return string(allowanceBytes), nil
+
+	return true, nil
 }
 
 func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []int) (interface{}, error) {

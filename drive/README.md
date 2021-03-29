@@ -13,9 +13,9 @@
 
 
 #### Methods
-- `CreateFile` : `(ipfsHash string, author wallet address) => (JSON Object, error)`
-- `Approve` : `(ipfsHash string, author,spenderAdr wallet address) => (JSON Object, error)` 
-- `Allowance` : `Query (ipfsHash string, spender wallet address) => (JSON Object, error)`
+- `CreateFile` : `(author wallet address, argsp[ipfsHash string, priveCode string(optional)]) => (JSON Object, error)`
+- `Approve` : `(priveCode string, author,spenderAdr wallet address) => (JSON Object, error)` 
+- `Allowance` : `Query (priveCode string, spender wallet address) => (boolean, error)`
 - `LikeContent` : `(ipfsHash string, wallet address) => (JSON Object, error)`
 - `CountDownloads` : `(ipfsHash string, wallet address) => (JSON Object, error)`
 - `GetTotalLikes` : `(ipfsHash string) => (JSON Object, error)`

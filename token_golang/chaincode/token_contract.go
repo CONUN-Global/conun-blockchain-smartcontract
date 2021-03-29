@@ -206,6 +206,23 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 
 	log.Printf("minter account %s balance updated from %d to %d", minter, currentBalance, updatedBalance)
 
+	tokenName, err := ctx.GetStub().GetState(namePrefix)
+	if err != nil {
+		return nil, err
+	}
+	details := &DetailsTx{
+		From:   minter,
+		To:     string(tokenName),
+		Action: "Mint",
+		Value:  strconv.Itoa(amount),
+	}
+
+	dtl, err := json.Marshal(details)
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
+	if err != nil {
+		return nil, err
+	}
+
 	txTime, _ := ctx.GetStub().GetTxTimestamp()
 	mintResp := &Fcn{
 		Minter: minter,
@@ -310,6 +327,24 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 	}
 
 	log.Printf("minter account %s balance updated from %d to %d", minter, currentBalance, updatedBalance)
+
+	tokenName, err := ctx.GetStub().GetState(namePrefix)
+	if err != nil {
+		return nil, err
+	}
+	details := &DetailsTx{
+		From:   minter,
+		To:     string(tokenName),
+		Action: "Burn",
+		Value:  strconv.Itoa(amount),
+	}
+
+	dtl, err := json.Marshal(details)
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
+	if err != nil {
+		return nil, err
+	}
+
 	txTime, _ := ctx.GetStub().GetTxTimestamp()
 	mintResp := &Fcn{
 		Minter: minter,
