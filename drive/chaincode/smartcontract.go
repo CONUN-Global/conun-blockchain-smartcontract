@@ -160,7 +160,7 @@ func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, cci
 
 }
 
-func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, ccidcode, spender string) (interface{}, error) {
+func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, ccidcode, spender string) (bool, error) {
 
 	allowanceKey, err := ctx.GetStub().CreateCompositeKey(allowancePrefix, []string{ccidcode, spender})
 	if err != nil {
@@ -298,6 +298,26 @@ func (s *SmartContract) FileExists(ctx contractapi.TransactionContextInterface, 
 	}
 
 	return ipfsHash != nil, nil
+}
+
+func (s *SmartContract) GetFile(ctx contractapi.TransactionContextInterface, ccid, spender string) (interface{}, error) {
+	if exists, err := s.FileExists(ctx, ccid); err != nil {
+		return nil, fmt.Errorf("error checking File, ", err)
+	} else if !exists {
+		return nil, fmt.Errorf("error getting file doesnt exists")
+	}
+
+	//check allowance
+	if ok, _ := s.Allowance(ctx, ccid, spender); ok {
+		ipfsHash, err := ctx.GetStub().GetState(ccid)
+		if err != nil {
+			return nil, err
+		}
+		if ipfsHash != nil {
+			return string(ipfsHash), nil
+		}
+		return nil, fmt.Errorf("Ipfs hash is empty")
+	}
 }
 
 func (s *SmartContract) GetTotalLikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
