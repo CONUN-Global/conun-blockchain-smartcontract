@@ -3,7 +3,9 @@ package chaincode
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
+	Crypto "github.com/drive/crypto"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
@@ -34,7 +36,7 @@ type Response struct {
 	Success   bool                 `json:"Success,omitempty"`   // true if success
 	TxID      string               `json:"TxID,omitempty"`      // transction id
 	Timestamp *timestamp.Timestamp `json:"Timestamp,omitempty"` // timestamp of the transaction
-	Value     int                  `json:"Value,omitempty"`     // value of dislike of like, count
+	Value     string               `json:"Value,omitempty"`     // value of dislike of like, count
 }
 
 // txDetails struct
@@ -64,34 +66,30 @@ const downloadCount = "ccid~user~txId"
  * @param {String} id the string id  of the file
  * @param {String} author The author of the file aka 'Requestor wallet.id'
  */
-func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, author string, args []string) (interface{}, error) {
+func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, author, ipfsHash string) (interface{}, error) {
 
-	if len(args) > 1 {
-		return nil, fmt.Errorf("Empty args len Error")
-	}
 	// check for file existance
-
-	if exists, err := s.FileExists(ctx, args[0]); err != nil {
+	hashSha1 := Crypto.EncodeToSha256(ipfsHash)
+	if exists, err := s.FileExists(ctx, hashSha1); err != nil {
 		return nil, err
 	} else if exists {
-		return nil, fmt.Errorf("The file %s already exists", args[0])
+		return nil, fmt.Errorf("The file %s already exists", hashSha1)
 	}
 	txTime, _ := ctx.GetStub().GetTxTimestamp()
-	err := ctx.GetStub().PutState(args[0], []byte(author))
+	err := ctx.GetStub().PutState(ipfsHash, []byte(author))
 	if err != nil {
 		return nil, err
 	}
-	if len(args) == 2 {
-		err := ctx.GetStub().PutState(args[1], []byte(args[0]))
-		if err != nil {
-			return nil, err
-		}
+	err = ctx.GetStub().PutState(hashSha1, []byte(ipfsHash))
+	if err != nil {
+		return nil, err
 	}
+
 	details := &DetailsTx{
 		From:   author,
 		To:     "Drive",
 		Action: "Create",
-		Value:  args[0],
+		Value:  hashSha1,
 	}
 
 	dtl, err := json.Marshal(details)
@@ -103,6 +101,7 @@ func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, 
 		Success:   true,
 		Fcn:       "CreateFile",
 		TxID:      ctx.GetStub().GetTxID(),
+		Value:     hashSha1,
 		Timestamp: txTime,
 	}
 	content, err := json.Marshal(res)
@@ -149,7 +148,7 @@ func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, cci
 		From:   author,
 		To:     "Drive",
 		Action: "Approve",
-		Value:  spenderAdr,
+		Value:  fmt.Sprintf("%s to %s ", ccidcode, spenderAdr),
 	}
 
 	dtl, err := json.Marshal(details)
@@ -292,13 +291,13 @@ func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterfa
  *this function strictly called inside chaincode
  */
 func (s *SmartContract) FileExists(ctx contractapi.TransactionContextInterface, ccid string) (bool, error) {
-	authorAdr, err := ctx.GetStub().GetState(ccid)
+	ipfsHash, err := ctx.GetStub().GetState(ccid)
 
 	if err != nil {
 		return false, fmt.Errorf("failde to read from world state: %v", err)
 	}
 
-	return authorAdr != nil, nil
+	return ipfsHash != nil, nil
 }
 
 func (s *SmartContract) GetTotalLikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
@@ -331,7 +330,7 @@ func (s *SmartContract) GetTotalLikes(ctx contractapi.TransactionContextInterfac
 	res := &Response{
 		Success: true,
 		Fcn:     "GetTotalLikes",
-		Value:   finalVal,
+		Value:   strconv.Itoa(finalVal),
 	}
 	content, err := json.Marshal(res)
 	if err != nil {
@@ -371,7 +370,7 @@ func (s *SmartContract) GetTotalDownloads(ctx contractapi.TransactionContextInte
 	res := &Response{
 		Success: true,
 		Fcn:     "GetTotalDownloads",
-		Value:   finalVal,
+		Value:   strconv.Itoa(finalVal),
 	}
 	content, err := json.Marshal(res)
 	if err != nil {
