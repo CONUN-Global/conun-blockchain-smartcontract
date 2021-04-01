@@ -302,7 +302,7 @@ func (s *SmartContract) FileExists(ctx contractapi.TransactionContextInterface, 
 
 func (s *SmartContract) GetFile(ctx contractapi.TransactionContextInterface, ccid, spender string) (interface{}, error) {
 	if exists, err := s.FileExists(ctx, ccid); err != nil {
-		return nil, fmt.Errorf("error checking File, ", err)
+		return nil, fmt.Errorf("error checking File, %s", err)
 	} else if !exists {
 		return nil, fmt.Errorf("error getting file doesnt exists")
 	}
@@ -314,10 +314,21 @@ func (s *SmartContract) GetFile(ctx contractapi.TransactionContextInterface, cci
 			return nil, err
 		}
 		if ipfsHash != nil {
-			return string(ipfsHash), nil
+			res := &Response{
+				Success: true,
+				Fcn:     "GetFile",
+				Value:   string(ipfsHash),
+			}
+			content, err := json.Marshal(res)
+			if err != nil {
+				return nil, err
+			}
+
+			return string(content), nil
 		}
 		return nil, fmt.Errorf("Ipfs hash is empty")
 	}
+	return nil, fmt.Errorf("You do not have allowance for this file")
 }
 
 func (s *SmartContract) GetTotalLikes(ctx contractapi.TransactionContextInterface, ccid string) (interface{}, error) {
