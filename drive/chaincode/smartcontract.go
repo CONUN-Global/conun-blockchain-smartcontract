@@ -15,21 +15,6 @@ type SmartContract struct {
 	contractapi.Contract
 }
 
-//initlialize file stuct
-type FileData struct {
-	Author    string `json:"Author"`    // requester wallet id
-	State     int    `json:"State"`     // state of the file
-	TxID      string `json:"TxID"`      // transcation id
-	Timestamp string `json:"Timestamp"` // timestamp of transaction
-}
-
-type OrderFile struct {
-	ID     string `json:"ID"`
-	Author string `json:"Author"`
-	Path   string `json:"Path"`
-	Price  int    `json:"Price"`
-}
-
 // initialize response
 type Response struct {
 	Fcn       string               `json:"Fcn,omitempty"`       // function name
@@ -60,13 +45,14 @@ const dislikePrefix = "dislike~ccid~user~txId"
 const downloadCount = "ccid~user~txId"
 
 /**
- * function: CreateFile
- *
- * @param {Context} ctx the transaction context
- * @param {String} id the string id  of the file
- * @param {String} author The author of the file aka 'Requestor wallet.id'
- */
-func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, author, ipfsHash string) (interface{}, error) {
+Create Content
+@param string ccid
+@param string author
+@param string approveTo
+@returns
+@memeberof Drive
+*/
+func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, author, ipfsHash string, state bool) (interface{}, error) {
 
 	// check for file existance
 	hashSha1 := Crypto.EncodeToSha256(ipfsHash)
@@ -113,6 +99,14 @@ func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, 
 
 }
 
+/**
+Approve Content
+@param string ccid
+@param string author
+@param string approveTo
+@returns
+@memeberof Drive
+*/
 func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, ccidcode, author, spenderAdr string) (interface{}, error) {
 	ccidByte, err := ctx.GetStub().GetState(ccidcode)
 	if err != nil {
@@ -160,6 +154,14 @@ func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, cci
 
 }
 
+/**
+Like Content Counter
+@param string ccid
+@param string walletid
+@param []int args [contentID, userID]
+@returns
+@memeberof Drive
+*/
 func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, ccidcode, spender string) (bool, error) {
 
 	allowanceKey, err := ctx.GetStub().CreateCompositeKey(allowancePrefix, []string{ccidcode, spender})
@@ -178,6 +180,13 @@ func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, c
 	return true, nil
 }
 
+/**
+Like Content Counter
+@param string ccid
+@param string walletid
+@returns
+@memeberof Drive
+*/
 func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []int) (interface{}, error) {
 
 	exists, err := s.FileExists(ctx, ccid)
@@ -233,23 +242,35 @@ func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface,
 
 }
 
+/**
+Download Content Counter
+@param string ccid
+@param string walletid
+@param []int args [contentID, userID]
+@returns
+@memeberof Drive
+*/
 func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []int) (interface{}, error) {
 
+	// check for file existance
 	exists, err := s.FileExists(ctx, ccid)
 	if err != nil {
 		return nil, fmt.Errorf("error checking file")
 	} else if !exists {
 		return nil, fmt.Errorf("error getting file doesnt exists")
 	}
+	// get txID
 	txID := ctx.GetStub().GetTxID()
 	downloadCount, err := ctx.GetStub().CreateCompositeKey(downloadCount, []string{ccid, walletid, txID})
 	if err != nil {
 		return nil, fmt.Errorf("getting error while creating like key")
 	}
+
 	err = ctx.GetStub().PutState(downloadCount, []byte{0x00})
 	if err != nil {
 		return nil, fmt.Errorf("error while writing data")
 	}
+	// set response
 	txTime, _ := ctx.GetStub().GetTxTimestamp()
 	res := &Response{
 		Success:   true,
@@ -274,11 +295,12 @@ func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterfa
 	if err != nil {
 		return nil, fmt.Errorf("failed to obtain JSON encoding: %v", err)
 	}
+	// emit event
 	err = ctx.GetStub().SetEvent("UserDownloads", downloadEventJSON)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set event: %v", err)
 	}
-
+	// marshal json data
 	dtl, err := json.Marshal(details)
 	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
 	if err != nil {
