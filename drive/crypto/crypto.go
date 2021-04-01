@@ -13,6 +13,6 @@ func EncodeToSha256(ipfsHash string) string {
 
 	hash := sha1.New()
 	hash.Write([]byte(ipfsHash))
-	return hex.EncodeToString(hash.Sum(nil))
+	return "con" + hex.EncodeToString(hash.Sum(nil))
 
 }
