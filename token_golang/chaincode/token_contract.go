@@ -11,6 +11,9 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+	"github.com/shopspring/decimal"
+	"github.com/tokenERC20/base"
+	"github.com/tokenERC20/util"
 )
 
 // Define key names for options
@@ -40,7 +43,7 @@ type SmartContract struct {
 type Event struct {
 	From  string `json:"From"`
 	To    string `json:"To"`
-	Value int    `json:"Value"`
+	Value string `json:"Value"`
 }
 
 // respnse struct
@@ -56,8 +59,8 @@ type Fcn struct {
 	Minter string `json:"Minter,omitempty"`
 	From   string `json:"From,omitempty"`
 	To     string `json:"To,omitempty"`
-	Amount int    `json:"Amount,omitempty"`
-	Total  int    `json:"Total,omitempty"`
+	Amount string `json:"Amount,omitempty"`
+	Total  string `json:"Total,omitempty"`
 }
 
 // info response struct
@@ -66,7 +69,7 @@ type Info struct {
 	TokenName   string `json:"TokenName"`
 	Symbol      string `json:"Symbol"`
 	Decimal     string `json:"Decimal"`
-	TotalSupply int    `json:"TotalSupply"`
+	TotalSupply string `json:"TotalSupply"`
 }
 
 // Tx Details struct
@@ -120,7 +123,9 @@ func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner 
 
 	Return success interface or error
 */
-func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount int) (interface{}, error) {
+func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount string) (interface{}, error) {
+
+	var TotalAmount, IncrAmount decimal.Decimal
 
 	// retrieve contract owner address
 	minterByte, err := ctx.GetStub().GetState(ownerPrefix)
@@ -140,33 +145,11 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 		return nil, fmt.Errorf("failed to Mint  Sender is not valid to Mint: %s", err)
 	}
 
-	if amount <= 0 {
-		return nil, fmt.Errorf("mint amount must be a positive integer")
+	if IncrAmount, err = util.ParsePositive(amount); err != nil {
+		return nil, fmt.Errorf("amount must be a positive integer")
 	}
 
-	currentBalanceBytes, err := ctx.GetStub().GetState(minter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read minter account %s from world state: %v", minter, err)
-	}
-
-	var currentBalance int
-
-	// If minter current balance doesn't yet exist, we'll create it with a current balance of 0
-	if currentBalanceBytes == nil {
-		currentBalance = 0
-	} else {
-		currentBalance, _ = strconv.Atoi(string(currentBalanceBytes)) // Error handling not needed since Itoa() was used when setting the account balance, guaranteeing it was an integer.
-	}
-
-	updatedBalance := currentBalance + amount
-
-	err = ctx.GetStub().PutState(minter, []byte(strconv.Itoa(updatedBalance)))
-	if err != nil {
-		return nil, err
-	}
-
-	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), []byte(strconv.Itoa(amount)))
-	if err != nil {
+	if err = base.AddToken(ctx, amount, minter); err != nil {
 		return nil, err
 	}
 
@@ -176,25 +159,29 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 		return nil, fmt.Errorf("failed to retrieve total token supply: %v", err)
 	}
 
-	var totalSupply int
+	var totalSupply string
 
 	// If no tokens have been minted, initialize the totalSupply
 	if totalSupplyBytes == nil {
-		totalSupply = 0
+		totalSupply = "0"
 	} else {
-		totalSupply, _ = strconv.Atoi(string(totalSupplyBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
+		totalSupply = string(totalSupplyBytes) // when setting the totalSupply, guaranteeing it was an integer string.
+	}
+
+	if TotalAmount, err = util.ParseNotNegative(totalSupply); err != nil {
+		TotalAmount = decimal.Zero
 	}
 
 	// Add the mint amount to the total supply and update the state
-	totalSupply += amount
-	err = ctx.GetStub().PutState(totalSupplyKey, []byte(strconv.Itoa(totalSupply)))
+	totalSupply = TotalAmount.Add(IncrAmount).String()
+	err = ctx.GetStub().PutState(totalSupplyKey, []byte(totalSupply))
 	if err != nil {
 		return nil, err
 	}
 
 	// Emit the Transfer event
 	transferEvent := &Event{
-		From: "0x0", To: minter, Value: amount}
+		From: "0x0", To: minter, Value: IncrAmount.String()}
 	transferEventJSON, err := json.Marshal(transferEvent)
 	if err != nil {
 		return nil, fmt.Errorf("failed to obtain JSON encoding: %v", err)
@@ -204,8 +191,6 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 		return nil, fmt.Errorf("failed to set event: %v", err)
 	}
 
-	log.Printf("minter account %s balance updated from %d to %d", minter, currentBalance, updatedBalance)
-
 	tokenName, err := ctx.GetStub().GetState(namePrefix)
 	if err != nil {
 		return nil, err
@@ -214,7 +199,7 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 		From:   minter,
 		To:     string(tokenName),
 		Action: "Mint",
-		Value:  strconv.Itoa(amount),
+		Value:  IncrAmount.String(),
 	}
 
 	dtl, err := json.Marshal(details)
@@ -226,8 +211,8 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 	txTime, _ := ctx.GetStub().GetTxTimestamp()
 	mintResp := &Fcn{
 		Minter: minter,
-		Amount: amount,
-		Total:  updatedBalance,
+		Amount: IncrAmount.String(),
+		Total:  totalSupply,
 	}
 	res := &Response{
 		Success:   true,
@@ -252,8 +237,9 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 
 	Return success interface or error
 */
-func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount int) (interface{}, error) {
+func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount string) (interface{}, error) {
 
+	var BurningAmount, TotalAmount decimal.Decimal
 	// Check minter authorization - this sample assumes Org1 is the central banker with privilege to burn new tokens
 	// retrieve contract owner address
 	minterByte, err := ctx.GetStub().GetState(ownerPrefix)
@@ -270,28 +256,11 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 		return nil, fmt.Errorf("failed to Burn  Sender is not valid to Burn: %s", err)
 	}
 
-	if amount <= 0 {
-		return nil, errors.New("burn amount must be a positive integer")
+	if BurningAmount, err = util.ParsePositive(amount); err != nil {
+		return nil, fmt.Errorf("burn amount must be integer string")
 	}
 
-	currentBalanceBytes, err := ctx.GetStub().GetState(minter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read minter account %s from world state: %v", minter, err)
-	}
-
-	var currentBalance int
-
-	// Check if minter current balance exists
-	if currentBalanceBytes == nil {
-		return nil, errors.New("The balance does not exist")
-	}
-
-	currentBalance, _ = strconv.Atoi(string(currentBalanceBytes)) // Error handling not needed since Itoa() was used when setting the account balance, guaranteeing it was an integer.
-
-	updatedBalance := currentBalance - amount
-
-	err = ctx.GetStub().PutState(minter, []byte(strconv.Itoa(updatedBalance)))
-	if err != nil {
+	if err = base.SubstractToken(ctx, amount, minter); err != nil {
 		return nil, err
 	}
 
@@ -305,18 +274,20 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 	if totalSupplyBytes == nil {
 		return nil, errors.New("totalSupply does not exist")
 	}
+	totalSupply := string(totalSupplyBytes)
 
-	totalSupply, _ := strconv.Atoi(string(totalSupplyBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
-
+	if TotalAmount, err = util.ParseNotNegative(totalSupply); err != nil {
+		TotalAmount = decimal.Zero
+	}
+	totalSupply = TotalAmount.Sub(BurningAmount).String()
 	// Subtract the burn amount to the total supply and update the state
-	totalSupply -= amount
-	err = ctx.GetStub().PutState(totalSupplyKey, []byte(strconv.Itoa(totalSupply)))
+	err = ctx.GetStub().PutState(totalSupplyKey, []byte(totalSupply))
 	if err != nil {
 		return nil, err
 	}
 
 	// Emit the Transfer event
-	transferEvent := &Event{From: minter, To: "0x0", Value: amount}
+	transferEvent := &Event{From: minter, To: "0x0", Value: BurningAmount.String()}
 	transferEventJSON, err := json.Marshal(transferEvent)
 	if err != nil {
 		return nil, fmt.Errorf("failed to obtain JSON encoding: %v", err)
@@ -326,8 +297,6 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 		return nil, fmt.Errorf("failed to set event: %v", err)
 	}
 
-	log.Printf("minter account %s balance updated from %d to %d", minter, currentBalance, updatedBalance)
-
 	tokenName, err := ctx.GetStub().GetState(namePrefix)
 	if err != nil {
 		return nil, err
@@ -336,7 +305,7 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 		From:   minter,
 		To:     string(tokenName),
 		Action: "Burn",
-		Value:  strconv.Itoa(amount),
+		Value:  BurningAmount.String(),
 	}
 
 	dtl, err := json.Marshal(details)
@@ -349,7 +318,7 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 	mintResp := &Fcn{
 		Minter: minter,
 		Amount: amount,
-		Total:  updatedBalance,
+		Total:  totalSupply,
 	}
 	resp := &Response{
 		Success:   true,
@@ -375,20 +344,30 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 
    Returns success interface or error
 */
-func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, from, recipient string, amount int) (interface{}, error) {
+func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, from, recipient, amount string) (interface{}, error) {
+	var decimalAmount decimal.Decimal
 
+	// verify user wallet
 	caller, err := ctx.GetClientIdentity().GetID()
 	if verify, err := addressHelper(caller, from); err != nil || !verify {
 		return nil, fmt.Errorf("failed to Transfer  Sender is not valid to Transfer: %s", err)
 	}
-
-	err = transferHelper(ctx, from, recipient, amount)
+	// from to should not be same wallet address
+	if from == recipient {
+		return nil, fmt.Errorf("from address and to address must be different values")
+	}
+	// verify for postive integer
+	if decimalAmount, err = util.ParsePositive(amount); err != nil {
+		return nil, fmt.Errorf("%s is not positive integer", amount)
+	}
+	// move token between wallets
+	err = base.MoveToken(ctx, from, recipient, amount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to transfer: %v", err)
 	}
 
 	// Emit the Transfer event
-	transferEvent := &Event{From: from, To: recipient, Value: amount}
+	transferEvent := &Event{From: from, To: recipient, Value: decimalAmount.String()}
 	transferEventJSON, err := json.Marshal(transferEvent)
 	if err != nil {
 		return nil, fmt.Errorf("failed to obtain JSON encoding: %v", err)
@@ -398,10 +377,24 @@ func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, fr
 		return nil, fmt.Errorf("failed to set event: %v", err)
 	}
 	txTime, _ := ctx.GetStub().GetTxTimestamp()
+
+	details := &DetailsTx{
+		From:   from,
+		To:     recipient,
+		Action: "Transfer",
+		Value:  decimalAmount.String(),
+	}
+
+	dtl, err := json.Marshal(details)
+	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
+	if err != nil {
+		return nil, err
+	}
+
 	mintResp := &Fcn{
 		From:   from,
 		To:     recipient,
-		Amount: amount,
+		Amount: decimalAmount.String(),
 	}
 	resp := &Response{
 		Success:   true,
@@ -418,18 +411,18 @@ func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, fr
 }
 
 // BalanceOf returns the balance of the given account
-func (s *SmartContract) BalanceOf(ctx contractapi.TransactionContextInterface, account string) (int, error) {
+func (s *SmartContract) BalanceOf(ctx contractapi.TransactionContextInterface, account string) (string, error) {
+	var BalanceDecimal decimal.Decimal
 	balanceBytes, err := ctx.GetStub().GetState(account)
 	if err != nil {
-		return 0, fmt.Errorf("failed to read from world state: %v", err)
+		return "0", fmt.Errorf("failed to read from world state: %v", err)
 	}
 	if balanceBytes == nil {
-		return 0, nil
+		return "0", nil
 	}
+	BalanceDecimal, _ = decimal.NewFromString(string(balanceBytes))
 
-	balance, _ := strconv.Atoi(string(balanceBytes)) // Error handling not needed since Itoa() was used when setting the account balance, guaranteeing it was an integer.
-
-	return balance, nil
+	return BalanceDecimal.String(), nil
 }
 
 /*
@@ -489,54 +482,55 @@ func (s *SmartContract) ClientAccountID(ctx contractapi.TransactionContextInterf
 
 	Return int the total supply or error
 */
-func (s *SmartContract) TotalSupply(ctx contractapi.TransactionContextInterface) (int, error) {
+func (s *SmartContract) TotalSupply(ctx contractapi.TransactionContextInterface) (string, error) {
 
 	// Retrieve total supply of tokens from state of smart contract
 	totalSupplyBytes, err := ctx.GetStub().GetState(totalSupplyKey)
 	if err != nil {
-		return 0, fmt.Errorf("failed to retrieve total token supply: %v", err)
+		return "0", fmt.Errorf("failed to retrieve total token supply: %v", err)
 	}
 
-	var totalSupply int
+	var totalSupply decimal.Decimal
 
 	// If no tokens have been minted, return 0
 	if totalSupplyBytes == nil {
-		totalSupply = 0
+		totalSupply, _ = decimal.NewFromString("0")
 	} else {
-		totalSupply, _ = strconv.Atoi(string(totalSupplyBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
+		totalSupply, _ = decimal.NewFromString(string(totalSupplyBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
 	}
 
-	log.Printf("TotalSupply: %d tokens", totalSupply)
-
-	return totalSupply, nil
+	return totalSupply.String(), nil
 }
 
 func (s *SmartContract) GetDetails(ctx contractapi.TransactionContextInterface) (interface{}, error) {
+	var totalSupplyDecimal decimal.Decimal
+
 	deployer, err := ctx.GetStub().GetState(ownerPrefix)
 	tokenName, err := ctx.GetStub().GetState(namePrefix)
 	symbol, err := ctx.GetStub().GetState(symbolPrefix)
-	decimal, err := ctx.GetStub().GetState(decimalPrefix)
+	decimalType, err := ctx.GetStub().GetState(decimalPrefix)
 	totalSupplyBytes, err := ctx.GetStub().GetState(totalSupplyKey)
 
 	if err != nil {
 		return nil, err
 	}
-	if decimal == nil || tokenName == nil || symbol == nil || deployer == nil {
-		return nil, fmt.Errorf("Init is not declared %s,%s,%s", string(decimal), string(tokenName), string(deployer))
+	if decimalType == nil || tokenName == nil || symbol == nil || deployer == nil {
+		return nil, fmt.Errorf("Init is not declared %s,%s,%s", string(decimalType), string(tokenName), string(deployer))
 	}
-	var totalSupply int
+	var totalSupply string
 	if totalSupplyBytes == nil {
-		totalSupply = 0
+		totalSupply = "0"
 	} else {
-		totalSupply, _ = strconv.Atoi(string(totalSupplyBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
+		totalSupply = string(totalSupplyBytes) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
 	}
 
+	totalSupplyDecimal, _ = decimal.NewFromString(totalSupply)
 	res := &Info{
 		Owner:       string(deployer),
 		TokenName:   string(tokenName),
 		Symbol:      string(symbol),
-		Decimal:     string(decimal),
-		TotalSupply: totalSupply,
+		Decimal:     string(decimalType),
+		TotalSupply: totalSupplyDecimal.String(),
 	}
 	content, err := json.Marshal(res)
 	if err != nil {
@@ -578,15 +572,15 @@ func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, spe
 	}
 
 	// Emit the Approval event
-	approvalEvent := &Event{From: owner, To: spender, Value: value}
-	approvalEventJSON, err := json.Marshal(approvalEvent)
-	if err != nil {
-		return fmt.Errorf("failed to obtain JSON encoding: %v", err)
-	}
-	err = ctx.GetStub().SetEvent("Approval", approvalEventJSON)
-	if err != nil {
-		return fmt.Errorf("failed to set event: %v", err)
-	}
+	// approvalEvent := &Event{From: owner, To: spender, Value: value}
+	// approvalEventJSON, err := json.Marshal(approvalEvent)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to obtain JSON encoding: %v", err)
+	// }
+	// err = ctx.GetStub().SetEvent("Approval", approvalEventJSON)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to set event: %v", err)
+	// }
 
 	log.Printf("client %s approved a withdrawal allowance of %d for spender %s", owner, value, spender)
 
@@ -640,7 +634,7 @@ func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, o
 
 	Returns success interface or error
 */
-func (s *SmartContract) TransferFrom(ctx contractapi.TransactionContextInterface, from string, to string, value int) error {
+func (s *SmartContract) TransferFrom(ctx contractapi.TransactionContextInterface, from string, to string, value string) error {
 
 	// Get ID of submitting client identity
 	spender, err := ctx.GetClientIdentity().GetID()
@@ -660,116 +654,37 @@ func (s *SmartContract) TransferFrom(ctx contractapi.TransactionContextInterface
 		return fmt.Errorf("failed to retrieve the allowance for %s from world state: %v", allowanceKey, err)
 	}
 
-	var currentAllowance int
-	currentAllowance, _ = strconv.Atoi(string(currentAllowanceBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
+	currentAllowanceDecimal, _ := decimal.NewFromString(string(currentAllowanceBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
 
+	valueDecimal, _ := decimal.NewFromString(value)
 	// Check if transferred value is less than allowance
-	if currentAllowance < value {
+	if currentAllowanceDecimal.Cmp(valueDecimal) < 0 {
 		return fmt.Errorf("spender does not have enough allowance for transfer")
 	}
 
 	// Initiate the transfer
-	err = transferHelper(ctx, from, to, value)
+	err = base.MoveToken(ctx, from, to, value)
 	if err != nil {
 		return fmt.Errorf("failed to transfer: %v", err)
 	}
 
 	// Decrease the allowance
-	updatedAllowance := currentAllowance - value
-	err = ctx.GetStub().PutState(allowanceKey, []byte(strconv.Itoa(updatedAllowance)))
+	updatedAllowance := currentAllowanceDecimal.Sub(valueDecimal)
+	err = ctx.GetStub().PutState(allowanceKey, []byte(updatedAllowance.String()))
 	if err != nil {
 		return err
 	}
 
 	// Emit the Transfer event
-	transferEvent := &Event{From: from, To: to, Value: value}
-	transferEventJSON, err := json.Marshal(transferEvent)
-	if err != nil {
-		return fmt.Errorf("failed to obtain JSON encoding: %v", err)
-	}
-	err = ctx.GetStub().SetEvent("Transfer", transferEventJSON)
-	if err != nil {
-		return fmt.Errorf("failed to set event: %v", err)
-	}
-
-	log.Printf("spender %s allowance updated from %d to %d", spender, currentAllowance, updatedAllowance)
-
-	return nil
-}
-
-/*
-	Helper functions
-	//transferHelper is a helper function that transfers tokens from the "from" address to the "to" address
-	//dependant functions include Transfer and TransferFrom
-
-	@param {Context} ctx the transaction context
-	@oaram {string} from client address
-	@param {string} to the recipient address
-	@param {int} value the amount to transfer
-
-	Returns error
-*/
-func transferHelper(ctx contractapi.TransactionContextInterface, from string, to string, value int) error {
-
-	if value < 0 { // transfer of 0 is allowed in ERC-20, so just validate against negative amounts
-		return fmt.Errorf("transfer amount cannot be negative")
-	}
-
-	fromCurrentBalanceBytes, err := ctx.GetStub().GetState(from)
-	if err != nil {
-		return fmt.Errorf("failed to read client account %s from world state: %v", from, err)
-	}
-
-	if fromCurrentBalanceBytes == nil {
-		return fmt.Errorf("client account %s has no balance", from)
-	}
-
-	fromCurrentBalance, _ := strconv.Atoi(string(fromCurrentBalanceBytes)) // Error handling not needed since Itoa() was used when setting the account balance, guaranteeing it was an integer.
-
-	if fromCurrentBalance < value {
-		return fmt.Errorf("client account %s has insufficient funds", from)
-	}
-
-	toCurrentBalanceBytes, err := ctx.GetStub().GetState(to)
-	if err != nil {
-		return fmt.Errorf("failed to read recipient account %s from world state: %v", to, err)
-	}
-
-	var toCurrentBalance int
-	// If recipient current balance doesn't yet exist, we'll create it with a current balance of 0
-	if toCurrentBalanceBytes == nil {
-		toCurrentBalance = 0
-	} else {
-		toCurrentBalance, _ = strconv.Atoi(string(toCurrentBalanceBytes)) // Error handling not needed since Itoa() was used when setting the account balance, guaranteeing it was an integer.
-	}
-
-	fromUpdatedBalance := fromCurrentBalance - value
-	toUpdatedBalance := toCurrentBalance + value
-
-	err = ctx.GetStub().PutState(from, []byte(strconv.Itoa(fromUpdatedBalance)))
-	if err != nil {
-		return err
-	}
-
-	err = ctx.GetStub().PutState(to, []byte(strconv.Itoa(toUpdatedBalance)))
-	if err != nil {
-		return err
-	}
-
-	details := &DetailsTx{
-		From:   from,
-		To:     to,
-		Action: "Transfer",
-		Value:  strconv.Itoa(value),
-	}
-
-	dtl, err := json.Marshal(details)
-	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
-	if err != nil {
-		return err
-	}
-	log.Printf("client %s balance updated from %d to %d", from, fromCurrentBalance, fromUpdatedBalance)
-	log.Printf("recipient %s balance updated from %d to %d", to, toCurrentBalance, toUpdatedBalance)
+	// transferEvent := &Event{From: from, To: to, Value: value}
+	// transferEventJSON, err := json.Marshal(transferEvent)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to obtain JSON encoding: %v", err)
+	// }
+	// err = ctx.GetStub().SetEvent("Transfer", transferEventJSON)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to set event: %v", err)
+	// }
 
 	return nil
 }
