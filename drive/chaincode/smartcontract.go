@@ -34,8 +34,8 @@ type DetailsTx struct {
 }
 
 type Event struct {
-	UserID    int                  `json:"UserID"`
-	ContentID int                  `json:"ContentID"`
+	UserID    string               `json:"UserID"`
+	ContentID string               `json:"ContentID"`
 	Timestamp *timestamp.Timestamp `json:"Timestamp"`
 }
 
@@ -52,7 +52,7 @@ Create Content
 @returns
 @memeberof Drive
 */
-func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, author, ipfsHash string, state bool) (interface{}, error) {
+func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, author, ipfsHash string) (interface{}, error) {
 
 	// check for file existance
 	hashSha1 := Crypto.EncodeToSha256(ipfsHash)
@@ -187,7 +187,7 @@ Like Content Counter
 @returns
 @memeberof Drive
 */
-func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []int) (interface{}, error) {
+func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []string) (interface{}, error) {
 
 	exists, err := s.FileExists(ctx, ccid)
 	if err != nil {
@@ -250,7 +250,7 @@ Download Content Counter
 @returns
 @memeberof Drive
 */
-func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []int) (interface{}, error) {
+func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []string) (interface{}, error) {
 
 	// check for file existance
 	exists, err := s.FileExists(ctx, ccid)
