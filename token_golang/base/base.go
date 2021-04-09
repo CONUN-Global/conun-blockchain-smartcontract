@@ -105,7 +105,7 @@ func MoveToken(ctx contractapi.TransactionContextInterface, fromwallet, towallet
 
 	toCoin, _ = decimal.NewFromString(string(toCurrentBalanceBytes))
 	toCoin = toCoin.Add(addAmount).Truncate(0)
-	if err = ctx.GetStub().PutState(fromwallet, []byte(toCoin.String())); err != nil {
+	if err = ctx.GetStub().PutState(towallet, []byte(toCoin.String())); err != nil {
 		return err
 	}
 	return nil
