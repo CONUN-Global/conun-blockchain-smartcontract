@@ -36,18 +36,14 @@ func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, 
 	if err = json.Unmarshal([]byte(data), &cd); err != nil {
 		return nil, fmt.Errorf(base.JSONParseError)
 	}
-	hashSha1 := Crypto.EncodeToSha256(ipfsHash)
+	hashSha1 := Crypto.EncodeToSha256(cd.IpfsHash)
 	if exists, err := s.FileExists(ctx, hashSha1); err != nil {
 		return nil, err
 	} else if exists {
 		return nil, fmt.Errorf("%s %s", base.FileExistsError, hashSha1)
 	}
 	txTime, _ := ctx.GetStub().GetTxTimestamp()
-	err = ctx.GetStub().PutState(ipfsHash, []byte(author))
-	if err != nil {
-		return nil, fmt.Errorf(base.PutStateError)
-	}
-	err = ctx.GetStub().PutState(hashSha1, []byte(ipfsHash))
+	err = ctx.GetStub().PutState(hashSha1, []byte(data))
 	if err != nil {
 		return nil, fmt.Errorf(base.PutStateError)
 	}
@@ -89,10 +85,13 @@ Approve Content
 @memeberof Drive
 */
 func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, ccidcode, author, spenderAdr string) (interface{}, error) {
+	var cd base.Content
+	var err error
 	ccidByte, err := ctx.GetStub().GetState(ccidcode)
 	if err != nil {
 		return nil, fmt.Errorf(base.GetstateError)
 	}
+	if e
 	ownerByte, err := ctx.GetStub().GetState(string(ccidByte))
 	if err != nil {
 		return nil, fmt.Errorf(base.GetstateError)
@@ -297,7 +296,7 @@ func (s *SmartContract) FileExists(ctx contractapi.TransactionContextInterface, 
 	ipfsHash, err := ctx.GetStub().GetState(ccid)
 
 	if err != nil {
-		return false, fmt.Errorf("failde to read from world state: %v", err)
+		return false, fmt.Errorf(base.GetstateError)
 	}
 
 	return ipfsHash != nil, nil
