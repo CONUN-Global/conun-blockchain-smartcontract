@@ -6,8 +6,11 @@ import (
 	"strconv"
 
 	"github.com/drive/base"
+	"github.com/drive/conos"
 	Crypto "github.com/drive/crypto"
+	"github.com/drive/util"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+	"github.com/shopspring/decimal"
 )
 
 // initliaze contract
@@ -28,7 +31,7 @@ Create Content
 @returns
 @memeberof Drive
 */
-func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, author, ipfsHash, data string) (interface{}, error) {
+func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, data string) (interface{}, error) {
 
 	var cd base.Content
 	var err error
@@ -49,7 +52,7 @@ func (s *SmartContract) CreateFile(ctx contractapi.TransactionContextInterface, 
 	}
 
 	details := &base.DetailsTx{
-		From:   author,
+		From:   cd.Author,
 		To:     "Drive",
 		Action: "Create",
 		Value:  hashSha1,
@@ -91,13 +94,12 @@ func (s *SmartContract) Approve(ctx contractapi.TransactionContextInterface, cci
 	if err != nil {
 		return nil, fmt.Errorf(base.GetstateError)
 	}
-	if e
-	ownerByte, err := ctx.GetStub().GetState(string(ccidByte))
-	if err != nil {
-		return nil, fmt.Errorf(base.GetstateError)
+	if err = json.Unmarshal(ccidByte, &cd); err != nil {
+		return nil, fmt.Errorf(base.JSONParseError)
 	}
-	if string(ownerByte) != author {
-		return nil, fmt.Errorf("%s: %s, %s", base.OwnerError, string(ownerByte), author)
+
+	if cd.Author != author {
+		return nil, fmt.Errorf("%s: %s, %s", base.OwnerError, cd.Author, author)
 	}
 	allowanceKey, err := ctx.GetStub().CreateCompositeKey(allowancePrefix, []string{ccidcode, spenderAdr})
 	if err != nil {
@@ -167,16 +169,22 @@ Like Content Counter
 @returns
 @memeberof Drive
 */
-func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []string) (interface{}, error) {
+func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface, action string) (interface{}, error) {
+	var act base.Action
+	var err error
 
-	exists, err := s.FileExists(ctx, ccid)
+	if err = json.Unmarshal([]byte(action), &act); err != nil {
+		return nil, fmt.Errorf(base.JSONParseError)
+	}
+
+	exists, err := s.FileExists(ctx, act.Ccid)
 	if err != nil {
 		return nil, fmt.Errorf(base.CheckFileError)
 	} else if !exists {
 		return nil, fmt.Errorf(base.EmptyFile)
 	}
 	txID := ctx.GetStub().GetTxID()
-	contentLikeKey, err := ctx.GetStub().CreateCompositeKey(likePrefix, []string{ccid, walletid, txID})
+	contentLikeKey, err := ctx.GetStub().CreateCompositeKey(likePrefix, []string{act.Ccid, act.Wallet, txID})
 	if err != nil {
 		return nil, fmt.Errorf(base.KeyCreationError)
 	}
@@ -197,13 +205,13 @@ func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface,
 	}
 
 	details := &base.DetailsTx{
-		From:   walletid,
+		From:   act.Wallet,
 		To:     "Drive",
 		Action: "Like",
-		Value:  ccid,
+		Value:  act.Ccid,
 	}
 	// set event
-	likeEvent := &base.Event{UserID: args[0], ContentID: args[1], Timestamp: txTime}
+	likeEvent := &base.Event{UserID: act.UserID, ContentID: act.ContentID, Timestamp: txTime}
 	likeEventJSON, err := json.Marshal(likeEvent)
 	if err != nil {
 		return nil, fmt.Errorf(base.JSONParseError)
@@ -230,10 +238,16 @@ Download Content Counter
 @returns
 @memeberof Drive
 */
-func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterface, ccid, walletid string, args []string) (interface{}, error) {
+func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterface, action string) (interface{}, error) {
+	var act base.Action
+	var err error
+
+	if err = json.Unmarshal([]byte(action), &act); err != nil {
+		return nil, fmt.Errorf(base.JSONParseError)
+	}
 
 	// check for file existance
-	exists, err := s.FileExists(ctx, ccid)
+	exists, err := s.FileExists(ctx, act.Ccid)
 	if err != nil {
 		return nil, fmt.Errorf(base.CheckFileError)
 	} else if !exists {
@@ -241,7 +255,7 @@ func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterfa
 	}
 	// get txID
 	txID := ctx.GetStub().GetTxID()
-	downloadCount, err := ctx.GetStub().CreateCompositeKey(downloadCount, []string{ccid, walletid, txID})
+	downloadCount, err := ctx.GetStub().CreateCompositeKey(downloadCount, []string{act.Ccid, act.Wallet, txID})
 	if err != nil {
 		return nil, fmt.Errorf(base.KeyCreationError)
 	}
@@ -263,14 +277,14 @@ func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterfa
 		return nil, fmt.Errorf(base.JSONParseError)
 	}
 	details := &base.DetailsTx{
-		From:   walletid,
+		From:   act.Wallet,
 		To:     "Drive",
 		Action: "Download",
-		Value:  ccid,
+		Value:  act.Ccid,
 	}
 
 	// set event
-	downloadEvent := &base.Event{UserID: args[0], ContentID: args[1], Timestamp: txTime}
+	downloadEvent := &base.Event{UserID: act.UserID, ContentID: act.ContentID, Timestamp: txTime}
 	downloadEventJSON, err := json.Marshal(downloadEvent)
 	if err != nil {
 		return nil, fmt.Errorf(base.JSONParseError)
@@ -293,42 +307,51 @@ func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterfa
  *this function strictly called inside chaincode
  */
 func (s *SmartContract) FileExists(ctx contractapi.TransactionContextInterface, ccid string) (bool, error) {
-	ipfsHash, err := ctx.GetStub().GetState(ccid)
+	cdata, err := ctx.GetStub().GetState(ccid)
 
 	if err != nil {
 		return false, fmt.Errorf(base.GetstateError)
 	}
 
-	return ipfsHash != nil, nil
+	return cdata != nil, nil
 }
 
 func (s *SmartContract) GetFile(ctx contractapi.TransactionContextInterface, ccid, spender string) (interface{}, error) {
-	if exists, err := s.FileExists(ctx, ccid); err != nil {
-		return nil, fmt.Errorf("error checking File, %s", err)
+	var err error
+	var cd base.Content
+	var exists bool
+	if exists, err = s.FileExists(ctx, ccid); err != nil {
+		return nil, fmt.Errorf(base.CheckFileError)
 	} else if !exists {
-		return nil, fmt.Errorf("error getting file doesnt exists")
+		return nil, fmt.Errorf(base.EmptyFile)
 	}
 
 	//check allowance
 	if ok, _ := s.Allowance(ctx, ccid, spender); ok {
-		ipfsHash, err := ctx.GetStub().GetState(ccid)
+		data, err := ctx.GetStub().GetState(ccid)
+		if err != nil {
+			return nil, fmt.Errorf(base.GetstateError)
+		}
+		if data == nil {
+			return nil, fmt.Errorf("Ipfs hash is empty")
+
+		}
+		if err = json.Unmarshal(data, &cd); err != nil {
+			return nil, fmt.Errorf(base.JSONParseError)
+		}
+
+		res := &base.Response{
+			Success: true,
+			Fcn:     "GetFile",
+			Value:   cd.IpfsHash,
+		}
+		content, err := json.Marshal(res)
 		if err != nil {
 			return nil, err
 		}
-		if ipfsHash != nil {
-			res := &base.Response{
-				Success: true,
-				Fcn:     "GetFile",
-				Value:   string(ipfsHash),
-			}
-			content, err := json.Marshal(res)
-			if err != nil {
-				return nil, err
-			}
 
-			return string(content), nil
-		}
-		return nil, fmt.Errorf("Ipfs hash is empty")
+		return string(content), nil
+
 	}
 	return nil, fmt.Errorf("You do not have allowance for this file")
 }
@@ -410,4 +433,37 @@ func (s *SmartContract) GetTotalDownloads(ctx contractapi.TransactionContextInte
 		return nil, err
 	}
 	return string(content), nil
+}
+
+/**
+Purchase Content
+*/
+func (s *SmartContract) PuchaseContent(ctx contractapi.TransactionContextInterface, ccid, wallet, price string) (interface{}, error) {
+	var err error
+	var cd base.Content
+	var p, a decimal.Decimal
+	cdByte, err := ctx.GetStub().GetState(ccid)
+	if err != nil {
+		return nil, fmt.Errorf(base.GetstateError)
+	}
+	if err = json.Unmarshal(cdByte, &cd); err != nil {
+		return nil, fmt.Errorf(base.JSONParseError)
+	}
+	p, err = util.ParsePositive(price)
+	if err != nil {
+		return nil, err
+	}
+	if a, err = util.ParsePositive(cd.Price); err != nil {
+		return nil, err
+	}
+	if p.Cmp(a) < 0 {
+		return nil, fmt.Errorf(base.WrongAmount)
+	}
+	ok, err := conos.SendToken(ctx, wallet, cd.Author, cd.Price)
+	if ok == false {
+		return nil, fmt.Errorf("Purchase failed %s", err)
+	}
+
+	return nil, err
+
 }
