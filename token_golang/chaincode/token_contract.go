@@ -94,8 +94,8 @@ func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner 
 	if err != nil || exists != nil {
 		return nil, fmt.Errorf("Contract already initalized by %s error:%s", string(exists), err)
 	}
-	err = ctx.GetStub().PutState(namePrefix, []byte("CONUN"))
-	err = ctx.GetStub().PutState(symbolPrefix, []byte("CON"))
+	err = ctx.GetStub().PutState(namePrefix, []byte("CONX"))
+	err = ctx.GetStub().PutState(symbolPrefix, []byte("CONX"))
 	err = ctx.GetStub().PutState(decimalPrefix, []byte(strconv.Itoa(18)))
 	err = ctx.GetStub().PutState(ownerPrefix, []byte(owner))
 	if err != nil {

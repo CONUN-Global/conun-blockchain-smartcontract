@@ -183,8 +183,17 @@ func (s *SmartContract) LikeContent(ctx contractapi.TransactionContextInterface,
 	} else if !exists {
 		return nil, fmt.Errorf(base.EmptyFile)
 	}
-	txID := ctx.GetStub().GetTxID()
-	contentLikeKey, err := ctx.GetStub().CreateCompositeKey(likePrefix, []string{act.Ccid, act.Wallet, txID})
+	deltaResultIterator, deltaErr := ctx.GetStub().GetStateByPartialCompositeKey(likePrefix, []string{act.Ccid, act.Wallet})
+	if deltaErr != nil {
+		return nil, fmt.Errorf("error occured while getting file")
+	}
+
+	defer deltaResultIterator.Close()
+
+	if deltaResultIterator.HasNext() {
+		return nil, fmt.Errorf("User Already Liked")
+	}
+	contentLikeKey, err := ctx.GetStub().CreateCompositeKey(likePrefix, []string{act.Ccid, act.Wallet})
 	if err != nil {
 		return nil, fmt.Errorf(base.KeyCreationError)
 	}
@@ -255,12 +264,12 @@ func (s *SmartContract) CountDownloads(ctx contractapi.TransactionContextInterfa
 	}
 	// get txID
 	txID := ctx.GetStub().GetTxID()
-	downloadCount, err := ctx.GetStub().CreateCompositeKey(downloadCount, []string{act.Ccid, act.Wallet, txID})
+	download, err := ctx.GetStub().CreateCompositeKey(downloadCount, []string{act.Ccid, act.Wallet, txID})
 	if err != nil {
 		return nil, fmt.Errorf(base.KeyCreationError)
 	}
 
-	err = ctx.GetStub().PutState(downloadCount, []byte{0x00})
+	err = ctx.GetStub().PutState(download, []byte{0x00})
 	if err != nil {
 		return nil, fmt.Errorf(base.PutStateError)
 	}

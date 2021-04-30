@@ -41,7 +41,7 @@ type Response struct {
 	Fcn       string               `json:"Fcn,omitempty"`       // function name
 	Success   bool                 `json:"Success,omitempty"`   // true if success
 	TxID      string               `json:"TxID,omitempty"`      // transaction id
-	Timestamp *timestamp.Timestamp `json:"Timestmap,omitempty"` // timestmap of the transaction
+	Timestamp *timestamp.Timestamp `json:"Timestamp,omitempty"` // timestmap of the transaction
 	Value     string               `json:"Value,omitempty"`     // value of content
 }
 
@@ -57,5 +57,5 @@ type DetailsTx struct {
 type Event struct {
 	UserID    string               `json:"UserID"`
 	ContentID string               `json:"ContentID"`
-	Timestamp *timestamp.Timestamp `json:"Timestmap"`
+	Timestamp *timestamp.Timestamp `json:"Timestamp"`
 }
