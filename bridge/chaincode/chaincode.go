@@ -84,7 +84,3 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, da
 
 	return string(resp), nil
 }
-
-//withdraw
-
-//set token contract
