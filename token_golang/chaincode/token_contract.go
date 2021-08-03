@@ -3,7 +3,6 @@ package chaincode
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -17,7 +16,7 @@ import (
 )
 
 // Define key names for options
-const totalSupplyKey = "totalSupply"
+// const totalSupplyKey = "totalSupply"
 
 // Define objectType names for prefix
 const allowancePrefix = "allowance"
@@ -94,8 +93,8 @@ func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner 
 	if err != nil || exists != nil {
 		return nil, fmt.Errorf("Contract already initalized by %s error:%s", string(exists), err)
 	}
-	err = ctx.GetStub().PutState(namePrefix, []byte("CONX"))
-	err = ctx.GetStub().PutState(symbolPrefix, []byte("CONX"))
+	err = ctx.GetStub().PutState(namePrefix, []byte("BANANACOIN"))
+	err = ctx.GetStub().PutState(symbolPrefix, []byte("BNC"))
 	err = ctx.GetStub().PutState(decimalPrefix, []byte(strconv.Itoa(18)))
 	err = ctx.GetStub().PutState(ownerPrefix, []byte(owner))
 	if err != nil {
@@ -115,6 +114,10 @@ func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner 
 }
 
 /*
+
+ */
+
+/*
 	Mint creates new tokens and adds them to contract owners account balance
 	 // this function triggers a Transfer event
 
@@ -123,9 +126,9 @@ func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner 
 
 	Return success interface or error
 */
-func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount string) (interface{}, error) {
+func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterface, user, amount string) (interface{}, error) {
 
-	var TotalAmount, IncrAmount decimal.Decimal
+	var IncrAmount decimal.Decimal
 
 	// retrieve contract owner address
 	minterByte, err := ctx.GetStub().GetState(ownerPrefix)
@@ -149,33 +152,7 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 		return nil, fmt.Errorf("amount must be a positive integer")
 	}
 
-	if err = base.AddToken(ctx, amount, minter); err != nil {
-		return nil, err
-	}
-
-	// Update the totalSupply
-	totalSupplyBytes, err := ctx.GetStub().GetState(totalSupplyKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve total token supply: %v", err)
-	}
-
-	var totalSupply string
-
-	// If no tokens have been minted, initialize the totalSupply
-	if totalSupplyBytes == nil {
-		totalSupply = "0"
-	} else {
-		totalSupply = string(totalSupplyBytes) // when setting the totalSupply, guaranteeing it was an integer string.
-	}
-
-	if TotalAmount, err = util.ParseNotNegative(totalSupply); err != nil {
-		TotalAmount = decimal.Zero
-	}
-
-	// Add the mint amount to the total supply and update the state
-	totalSupply = TotalAmount.Add(IncrAmount).String()
-	err = ctx.GetStub().PutState(totalSupplyKey, []byte(totalSupply))
-	if err != nil {
+	if err = base.AddToken(ctx, amount, user); err != nil {
 		return nil, err
 	}
 
@@ -210,9 +187,8 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 
 	txTime, _ := ctx.GetStub().GetTxTimestamp()
 	mintResp := &Fcn{
-		Minter: minter,
+		Minter: user,
 		Amount: IncrAmount.String(),
-		Total:  totalSupply,
 	}
 	res := &Response{
 		Success:   true,
@@ -237,9 +213,9 @@ func (s *SmartContract) Mint(ctx contractapi.TransactionContextInterface, amount
 
 	Return success interface or error
 */
-func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount string) (interface{}, error) {
+func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, user, amount string) (interface{}, error) {
 
-	var BurningAmount, TotalAmount decimal.Decimal
+	var BurningAmount decimal.Decimal
 	// Check minter authorization - this sample assumes Org1 is the central banker with privilege to burn new tokens
 	// retrieve contract owner address
 	minterByte, err := ctx.GetStub().GetState(ownerPrefix)
@@ -260,29 +236,7 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 		return nil, fmt.Errorf("burn amount must be integer string")
 	}
 
-	if err = base.SubstractToken(ctx, amount, minter); err != nil {
-		return nil, err
-	}
-
-	// Update the totalSupply
-	totalSupplyBytes, err := ctx.GetStub().GetState(totalSupplyKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve total token supply: %v", err)
-	}
-
-	// If no tokens have been minted, throw error
-	if totalSupplyBytes == nil {
-		return nil, errors.New("totalSupply does not exist")
-	}
-	totalSupply := string(totalSupplyBytes)
-
-	if TotalAmount, err = util.ParseNotNegative(totalSupply); err != nil {
-		TotalAmount = decimal.Zero
-	}
-	totalSupply = TotalAmount.Sub(BurningAmount).String()
-	// Subtract the burn amount to the total supply and update the state
-	err = ctx.GetStub().PutState(totalSupplyKey, []byte(totalSupply))
-	if err != nil {
+	if err = base.SubstractToken(ctx, amount, user); err != nil {
 		return nil, err
 	}
 
@@ -318,7 +272,6 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 	mintResp := &Fcn{
 		Minter: minter,
 		Amount: amount,
-		Total:  totalSupply,
 	}
 	resp := &Response{
 		Success:   true,
@@ -346,8 +299,8 @@ func (s *SmartContract) Burn(ctx contractapi.TransactionContextInterface, amount
 */
 func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, from, recipient, amount string) (interface{}, error) {
 	var decimalAmount decimal.Decimal
-
-	// verify user wallet
+	var err error
+	// // verify user wallet
 	caller, err := ctx.GetClientIdentity().GetID()
 	if verify, err := addressHelper(caller, from); err != nil || !verify {
 		return nil, fmt.Errorf("failed to Transfer  Sender is not valid to Transfer: %s", err)
@@ -475,41 +428,12 @@ func (s *SmartContract) ClientAccountID(ctx contractapi.TransactionContextInterf
 	return clientAccountID, nil
 }
 
-/*
-	TotalSupply returns the totoal token supply
-
-	@param {Context} ctx the transaction context
-
-	Return int the total supply or error
-*/
-func (s *SmartContract) TotalSupply(ctx contractapi.TransactionContextInterface) (string, error) {
-
-	// Retrieve total supply of tokens from state of smart contract
-	totalSupplyBytes, err := ctx.GetStub().GetState(totalSupplyKey)
-	if err != nil {
-		return "0", fmt.Errorf("failed to retrieve total token supply: %v", err)
-	}
-
-	var totalSupply decimal.Decimal
-
-	// If no tokens have been minted, return 0
-	if totalSupplyBytes == nil {
-		totalSupply, _ = decimal.NewFromString("0")
-	} else {
-		totalSupply, _ = decimal.NewFromString(string(totalSupplyBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
-	}
-
-	return totalSupply.String(), nil
-}
-
 func (s *SmartContract) GetDetails(ctx contractapi.TransactionContextInterface) (interface{}, error) {
-	var totalSupplyDecimal decimal.Decimal
 
 	deployer, err := ctx.GetStub().GetState(ownerPrefix)
 	tokenName, err := ctx.GetStub().GetState(namePrefix)
 	symbol, err := ctx.GetStub().GetState(symbolPrefix)
 	decimalType, err := ctx.GetStub().GetState(decimalPrefix)
-	totalSupplyBytes, err := ctx.GetStub().GetState(totalSupplyKey)
 
 	if err != nil {
 		return nil, err
@@ -517,20 +441,12 @@ func (s *SmartContract) GetDetails(ctx contractapi.TransactionContextInterface) 
 	if decimalType == nil || tokenName == nil || symbol == nil || deployer == nil {
 		return nil, fmt.Errorf("Init is not declared %s,%s,%s", string(decimalType), string(tokenName), string(deployer))
 	}
-	var totalSupply string
-	if totalSupplyBytes == nil {
-		totalSupply = "0"
-	} else {
-		totalSupply = string(totalSupplyBytes) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
-	}
 
-	totalSupplyDecimal, _ = decimal.NewFromString(totalSupply)
 	res := &Info{
-		Owner:       string(deployer),
-		TokenName:   string(tokenName),
-		Symbol:      string(symbol),
-		Decimal:     string(decimalType),
-		TotalSupply: totalSupplyDecimal.String(),
+		Owner:     string(deployer),
+		TokenName: string(tokenName),
+		Symbol:    string(symbol),
+		Decimal:   string(decimalType),
 	}
 	content, err := json.Marshal(res)
 	if err != nil {
