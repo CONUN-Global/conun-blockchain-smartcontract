@@ -126,7 +126,7 @@ func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner 
 
 	Return success interface or error
 */
-func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterface, user, amount string) (interface{}, error) {
+func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterface, user, amount, msg, signature string) (interface{}, error) {
 
 	var IncrAmount decimal.Decimal
 
@@ -139,13 +139,8 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 	}
 	minter := string(minterByte)
 	// check if contract caller is contract owner
-	ownerID, err := ctx.GetClientIdentity().GetID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user Address %s", err)
-	}
-
-	if verify, err := addressHelper(ownerID, minter); err != nil || !verify {
-		return nil, fmt.Errorf("failed to Mint  Sender is not valid to Mint: %s", err)
+	if verify, err := util.VerifyMsgAddr(minter, signature, msg); !verify || err != nil {
+		return nil, err
 	}
 
 	if IncrAmount, err = util.ParsePositive(amount); err != nil {
@@ -213,7 +208,7 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 
 	Return success interface or error
 */
-func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, user, amount string) (interface{}, error) {
+func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, user, amount, msg, signature string) (interface{}, error) {
 
 	var BurningAmount decimal.Decimal
 	// Check minter authorization - this sample assumes Org1 is the central banker with privilege to burn new tokens
@@ -222,14 +217,12 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, us
 	if err != nil {
 		return nil, fmt.Errorf("failed while getting minterAddress %s", err)
 	} else if minterByte == nil {
-		return nil, fmt.Errorf("Contract is not initialized yet")
+		return nil, fmt.Errorf("contract is not initialized yet")
 	}
 	minter := string(minterByte)
-	// check if contract caller is contract owner
-	ownerID, err := ctx.GetClientIdentity().GetID()
 
-	if verify, err := addressHelper(ownerID, minter); err != nil || !verify {
-		return nil, fmt.Errorf("failed to Burn  Sender is not valid to Burn: %s", err)
+	if verify, err := util.VerifyMsgAddr(minter, signature, msg); !verify || err != nil {
+		return nil, err
 	}
 
 	if BurningAmount, err = util.ParsePositive(amount); err != nil {
@@ -297,14 +290,15 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, us
 
    Returns success interface or error
 */
-func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, from, recipient, amount string) (interface{}, error) {
+func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, from, recipient, amount, msg, signature string) (interface{}, error) {
 	var decimalAmount decimal.Decimal
 	var err error
 	// // verify user wallet
-	caller, err := ctx.GetClientIdentity().GetID()
-	if verify, err := addressHelper(caller, from); err != nil || !verify {
-		return nil, fmt.Errorf("failed to Transfer  Sender is not valid to Transfer: %s", err)
+
+	if verify, err := util.VerifyMsgAddr(from, signature, msg); !verify || err != nil {
+		return nil, err
 	}
+
 	// from to should not be same wallet address
 	if from == recipient {
 		return nil, fmt.Errorf("from address and to address must be different values")
@@ -532,7 +526,7 @@ func (s *SmartContract) Allowance(ctx contractapi.TransactionContextInterface, o
 	if allowanceBytes == nil {
 		allowance = 0
 	} else {
-		allowance, err = strconv.Atoi(string(allowanceBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
+		allowance, _ = strconv.Atoi(string(allowanceBytes)) // Error handling not needed since Itoa() was used when setting the totalSupply, guaranteeing it was an integer.
 	}
 
 	log.Printf("The allowance left for spender %s to withdraw from owner %s: %d", spender, owner, allowance)

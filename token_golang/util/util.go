@@ -2,8 +2,12 @@ package util
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/shopspring/decimal"
+	"golang.org/x/crypto/sha3"
 )
 
 func isNumeric(s string) bool {
@@ -47,4 +51,26 @@ func ParseNotNegative(s string) (decimal.Decimal, error) {
 		return d, fmt.Errorf("%s is negative", s)
 	}
 	return d, nil
+}
+
+func VerifyMsgAddr(from, sign, msg string) (bool, error) {
+
+	msgBytes := hexutil.MustDecode(msg)
+	sig := hexutil.MustDecode(sign)
+
+	if sig[64] != 27 && sig[64] != 28 {
+		return false, fmt.Errorf("Error signature is not valid type")
+	}
+	sig[64] -= 27
+	sigPubKey, err := crypto.Ecrecover(msgBytes, sig)
+	if err != nil {
+		return false, fmt.Errorf("error verifying msg %s", err)
+	}
+
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(sigPubKey[1:]) // 0x
+	if strings.Compare(strings.ToLower(string(hexutil.Encode(hash.Sum(nil)[12:]))), strings.ToLower(from)) == 0 {
+		return true, nil
+	}
+	return false, fmt.Errorf("Error address doesnt mastch")
 }

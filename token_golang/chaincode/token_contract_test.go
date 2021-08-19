@@ -67,7 +67,7 @@ func TestTransfer(t *testing.T) {
 	transactionContext.GetStubReturns(chaincodeStub)
 
 	transfer := chaincode.SmartContract{}
-	resp, err := transfer.Transfer(transactionContext, "00x", "00x5", 10)
+	resp, err := transfer.TransferFrom(transactionContext, "00x", "00x5", 10, "sign", "msg")
 	require.NoError(t, err)
 	fmt.Println(resp)
 }
