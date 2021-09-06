@@ -10,9 +10,9 @@ type SmartContract struct {
 	contractapi.Contract
 }
 
-func Bridge(ctx contractapi.TransactionContextInterface, fcName, toWallet, amount string) (bool, error) {
+func Bridge(ctx contractapi.TransactionContextInterface, fcName, toWallet, amount msg, signature string) (bool, error) {
 
-	params := []string{fcName, toWallet, amount}
+	params := []string{fcName, toWallet, amount, msg, signature}
 	queryArgs := make([][]byte, len(params))
 	for i, args := range params {
 		queryArgs[i] = []byte(args)

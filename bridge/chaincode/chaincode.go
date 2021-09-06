@@ -12,9 +12,11 @@ type SmartContract struct {
 }
 
 type Details struct {
-	Id     string `json:"id"`
-	User   string `json:"user"`
-	Amount string `json:"amount"`
+	Id        string `json:"id"`
+	User      string `json:"user"`
+	Amount    string `json:"amount"`
+	Message   string `json:message`
+	Signature string `json:signature`
 }
 
 type TxDetails struct {
@@ -39,7 +41,7 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 		return nil, err
 	}
 
-	_, err = bridge.Bridge(ctx, "MintAndTransfer", dataJson.User, dataJson.Amount)
+	_, err = bridge.Bridge(ctx, "MintAndTransfer", dataJson.User, dataJson.Amount, dataJson.Message, dataJson.Signature)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +69,7 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, da
 		return nil, err
 	}
 
-	_, err = bridge.Bridge(ctx, "BurnFrom", dataJson.User, dataJson.Amount)
+	_, err = bridge.Bridge(ctx, "BurnFrom", dataJson.User, dataJson.Amount, dataJson.Message, dataJson.Signature)
 	if err != nil {
 		return nil, err
 	}
