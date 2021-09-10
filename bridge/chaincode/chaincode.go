@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bridge/base"
 	"github.com/bridge/bridge"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
@@ -29,6 +30,12 @@ type TxDetails struct {
 	To     string `json:"to"`
 	Action string `json:"action"`
 	Value  string `json:"value"`
+}
+
+type Event struct {
+	Id     string `json:"id"`
+	User   string `json:"user"`
+	Amount string `json:"amount"`
 }
 
 const DepositPrefix = "depostix~prefix"
@@ -73,6 +80,17 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 		Value:  dataJson.Amount,
 	}
 
+	// set event
+	mintEevent := &Event{Id: dataJson.Id, User: dataJson.User, Amount: dataJson.Amount}
+	mintEeventJSON, err := json.Marshal(mintEevent)
+	if err != nil {
+		return nil, fmt.Errorf(base.JSONParseError)
+	}
+	err = ctx.GetStub().SetEvent("MintAndTransfer", mintEeventJSON)
+	if err != nil {
+		return nil, fmt.Errorf(base.EventError)
+	}
+
 	resp, _ := json.Marshal(response)
 	_ = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), resp)
 
@@ -87,6 +105,10 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, da
 		return nil, err
 	}
 
+	if _, exists := IdState[dataJson.Id]; exists {
+		return nil, fmt.Errorf("key Id is already exists")
+	}
+
 	_, err = bridge.Bridge(ctx, "BurnFrom", dataJson.User, dataJson.Amount, dataJson.Message, dataJson.Signature)
 	if err != nil {
 		return nil, err
@@ -97,6 +119,17 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, da
 		To:     "0x0",
 		Action: "BurnFrom",
 		Value:  dataJson.Amount,
+	}
+
+	// set event
+	burnEevent := &Event{Id: dataJson.Id, User: dataJson.User, Amount: dataJson.Amount}
+	burnEeventtJSON, err := json.Marshal(burnEevent)
+	if err != nil {
+		return nil, fmt.Errorf(base.JSONParseError)
+	}
+	err = ctx.GetStub().SetEvent("BurnFrom", burnEeventtJSON)
+	if err != nil {
+		return nil, fmt.Errorf(base.EventError)
 	}
 
 	resp, _ := json.Marshal(response)
