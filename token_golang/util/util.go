@@ -27,7 +27,7 @@ func ParsePositive(s string) (decimal.Decimal, error) {
 	if d, err = decimal.NewFromString(s); err != nil {
 		return d, fmt.Errorf("is not integer %s", err)
 	}
-	if isNumeric(s) == false {
+	if !isNumeric(s) {
 		return d, fmt.Errorf("is not integer string %s", err)
 	}
 	if !d.IsPositive() {
@@ -44,7 +44,7 @@ func ParseNotNegative(s string) (decimal.Decimal, error) {
 		return d, fmt.Errorf("%s is not integer string", s)
 
 	}
-	if isNumeric(s) == false {
+	if !isNumeric(s) {
 		return d, fmt.Errorf("%s is not integer", s)
 	}
 	if d.IsNegative() {
@@ -55,11 +55,18 @@ func ParseNotNegative(s string) (decimal.Decimal, error) {
 
 func VerifyMsgAddr(from, sign, msg string) (bool, error) {
 
-	msgBytes := hexutil.MustDecode(msg)
-	sig := hexutil.MustDecode(sign)
+	msgBytes, err := mustDecodeUtil(msg)
+	if err != nil {
+		return false, err
+	}
 
+	sig, err := mustDecodeUtil(sign)
+
+	if err != nil {
+		return false, err
+	}
 	if sig[64] != 27 && sig[64] != 28 {
-		return false, fmt.Errorf("Error signature is not valid type")
+		return false, fmt.Errorf("error signature is not valid type")
 	}
 	sig[64] -= 27
 	sigPubKey, err := crypto.Ecrecover(msgBytes, sig)
@@ -72,5 +79,11 @@ func VerifyMsgAddr(from, sign, msg string) (bool, error) {
 	if strings.Compare(strings.ToLower(string(hexutil.Encode(hash.Sum(nil)[12:]))), strings.ToLower(from)) == 0 {
 		return true, nil
 	}
-	return false, fmt.Errorf("Error address doesnt mastch")
+	return false, fmt.Errorf("error address doesnt mastch")
+}
+
+// MustDecode decodes a hex string with 0x prefix. It panics for invalid input.
+func mustDecodeUtil(input string) ([]byte, error) {
+	dec, err := hexutil.Decode(input)
+	return dec, err
 }
