@@ -33,9 +33,9 @@ type TxDetails struct {
 }
 
 type Event struct {
-	Id     string `json:"id"`
-	User   string `json:"user"`
-	Amount string `json:"amount"`
+	Id    string `json:"id"`
+	User  string `json:"user"`
+	Value string `json:"value"`
 }
 
 const DepositPrefix = "depostix~prefix"
@@ -81,7 +81,7 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 	}
 
 	// set event
-	mintEevent := &Event{Id: dataJson.Id, User: dataJson.User, Amount: dataJson.Amount}
+	mintEevent := &Event{Id: dataJson.Id, User: dataJson.User, Value: dataJson.Amount}
 	mintEeventJSON, err := json.Marshal(mintEevent)
 	if err != nil {
 		return nil, fmt.Errorf(base.JSONParseError)
@@ -122,7 +122,7 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, da
 	}
 
 	// set event
-	burnEevent := &Event{Id: dataJson.Id, User: dataJson.User, Amount: dataJson.Amount}
+	burnEevent := &Event{Id: dataJson.Id, User: dataJson.User, Value: dataJson.Amount}
 	burnEeventtJSON, err := json.Marshal(burnEevent)
 	if err != nil {
 		return nil, fmt.Errorf(base.JSONParseError)
