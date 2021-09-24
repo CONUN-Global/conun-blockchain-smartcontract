@@ -58,7 +58,7 @@ type Fcn struct {
 	Minter string `json:"Minter,omitempty"`
 	From   string `json:"From,omitempty"`
 	To     string `json:"To,omitempty"`
-	Amount string `json:"Amount,omitempty"`
+	Value  string `json:"Value,omitempty"`
 	Total  string `json:"Total,omitempty"`
 }
 
@@ -183,7 +183,7 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 	txTime, _ := ctx.GetStub().GetTxTimestamp()
 	mintResp := &Fcn{
 		Minter: user,
-		Amount: IncrAmount.String(),
+		Value:  IncrAmount.String(),
 	}
 	res := &Response{
 		Success:   true,
@@ -264,7 +264,7 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, us
 	txTime, _ := ctx.GetStub().GetTxTimestamp()
 	mintResp := &Fcn{
 		Minter: minter,
-		Amount: amount,
+		Value:  amount,
 	}
 	resp := &Response{
 		Success:   true,
@@ -339,9 +339,9 @@ func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, fr
 	}
 
 	mintResp := &Fcn{
-		From:   from,
-		To:     recipient,
-		Amount: decimalAmount.String(),
+		From:  from,
+		To:    recipient,
+		Value: decimalAmount.String(),
 	}
 	resp := &Response{
 		Success:   true,

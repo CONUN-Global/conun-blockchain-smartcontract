@@ -17,25 +17,25 @@ type SmartContract struct {
 }
 
 type Details struct {
-	Id        string `json:"id"`
-	Key       string `json:"key"`
-	User      string `json:"user"`
-	Amount    string `json:"amount"`
-	Message   string `json:"message"`
-	Signature string `json:"signature"`
+	Id        string `json:"Id"`
+	Key       string `json:"Key"`
+	User      string `json:"User"`
+	Amount    string `json:"Value"`
+	Message   string `json:"Message"`
+	Signature string `json:"Signature"`
 }
 
 type TxDetails struct {
-	From   string `json:"from"`
-	To     string `json:"to"`
-	Action string `json:"action"`
-	Value  string `json:"value"`
+	From   string `json:"From"`
+	To     string `json:"To"`
+	Action string `json:"Action"`
+	Value  string `json:"Value"`
 }
 
 type Event struct {
-	Id    string `json:"id"`
-	User  string `json:"user"`
-	Value string `json:"value"`
+	Id    string `json:"Id"`
+	User  string `json:"User"`
+	Value string `json:"Value"`
 }
 
 const DepositPrefix = "depostix~prefix"
