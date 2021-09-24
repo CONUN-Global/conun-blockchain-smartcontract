@@ -56,9 +56,12 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 	if _, exists := IdState[dataJson.Id]; exists {
 		return nil, fmt.Errorf("key Id is already exists")
 	}
-
+	l, err := hex.DecodeString(dataJson.Key)
+	if err != nil {
+		return nil, err
+	}
 	hash := sha256.New()
-	hash.Write([]byte(dataJson.Key))
+	hash.Write(l)
 	md := hash.Sum(nil)
 	mdStr := hex.EncodeToString(md)
 

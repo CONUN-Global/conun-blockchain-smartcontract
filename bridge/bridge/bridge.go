@@ -18,7 +18,7 @@ func Bridge(ctx contractapi.TransactionContextInterface, fcName, toWallet, amoun
 		queryArgs[i] = []byte(args)
 	}
 
-	res := ctx.GetStub().InvokeChaincode("CONX", queryArgs, "mychannel")
+	res := ctx.GetStub().InvokeChaincode("conx", queryArgs, "mychannel")
 	if res.Payload == nil {
 		return false, fmt.Errorf("error occured while invoking chaincode %s", res.Payload)
 	}
