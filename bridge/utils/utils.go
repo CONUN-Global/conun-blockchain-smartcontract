@@ -3,8 +3,15 @@ package utils
 import (
 	"fmt"
 
+	"math/big"
+
 	"github.com/shopspring/decimal"
 	"google.golang.org/genproto/googleapis/type/decimal"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"golang.org/x/crypto/sha3"
 )
 
 func isNumeric(s string) bool {
@@ -33,5 +40,37 @@ func ParsePositive(s string) (decimal.Decimal, error) {
 	}
 
 	return d, nil
+
+}
+
+func GetMsgForSign(_address string, _amount int64) (string, error) {
+
+	uint256Ty := abi.NewType("uint256", "uint256", nil)
+	addressTy := abi.NewType("address", "address", nil)
+
+	arguments := abi.Arguments{
+		{
+			Type: uint256Ty,
+		},
+		{
+			Type: addressTy,
+		},
+	}
+
+	bytes, err := arguments.Pack(
+		big.NewInt(_amount),
+		common.HexToAddress(_address),
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	var buf []byte
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(bytes)
+	buf = hash.Sum(buf)
+
+	return hexutil.Encode(buf), nil
 
 }

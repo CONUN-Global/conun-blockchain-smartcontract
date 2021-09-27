@@ -5,10 +5,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/bridge/base"
 	"github.com/bridge/bridge"
+	"github.com/bridge/utils"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -65,8 +67,17 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 	md := hash.Sum(nil)
 	mdStr := hex.EncodeToString(md)
 
-	if c := strings.Compare(dataJson.Id, mdStr); c < 0 {
+	if c := strings.Compare(dataJson.Id, mdStr); c != 0 {
 		return nil, fmt.Errorf("keys are not matching")
+	}
+
+	hashedMsg, err := utils.GetMsgForSign(dataJson.User, strconv.Atoi(dataJson.Amount))
+	if err != nil {
+		return nil, err
+	}
+
+	if c := strings.Compare(hashedMsg, dataJson.Message); c != 0 {
+		return nil, fmt.Errorf("integrity check failed")
 	}
 
 	_, err = bridge.Bridge(ctx, "MintAndTransfer", dataJson.User, dataJson.Amount, dataJson.Message, dataJson.Signature)
