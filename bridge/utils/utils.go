@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/shopspring/decimal"
-	"google.golang.org/genproto/googleapis/type/decimal"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -43,12 +42,16 @@ func ParsePositive(s string) (decimal.Decimal, error) {
 
 }
 
-func GetMsgForSign(_address string, _amount int64) (string, error) {
+func GetMsgForSign(_address, swapId string, _amount *big.Int) (string, error) {
 
-	uint256Ty := abi.NewType("uint256", "uint256", nil)
-	addressTy := abi.NewType("address", "address", nil)
+	uint256Ty, _ := abi.NewType("uint256", "uint256", nil)
+	addressTy, _ := abi.NewType("address", "address", nil)
+	swapID, _ := abi.NewType("bytes32", "bytes32", nil)
 
 	arguments := abi.Arguments{
+		{
+			Type: swapID,
+		},
 		{
 			Type: uint256Ty,
 		},
@@ -58,7 +61,8 @@ func GetMsgForSign(_address string, _amount int64) (string, error) {
 	}
 
 	bytes, err := arguments.Pack(
-		big.NewInt(_amount),
+		common.HexToHash("0x"+swapId),
+		_amount,
 		common.HexToAddress(_address),
 	)
 
