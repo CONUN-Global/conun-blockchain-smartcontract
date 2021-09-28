@@ -3,7 +3,7 @@ module github.com/tokenERC20
 go 1.15
 
 require (
-	github.com/ethereum/go-ethereum v1.10.7
+	github.com/ethereum/go-ethereum v1.10.8
 	github.com/go-openapi/spec v0.20.3 // indirect
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/gobuffalo/envy v1.9.0 // indirect
@@ -18,7 +18,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
 	google.golang.org/genproto v0.0.0-20210405174219-a39eb2f71cb9 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
