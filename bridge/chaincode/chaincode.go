@@ -44,8 +44,6 @@ const DepositPrefix = "depostix~prefix"
 const WithdrawPrefix = "withdraw~prefix"
 const TokenContract = "token"
 
-var IdState = make(map[string]bool)
-
 // deposit
 func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterface, data string) (interface{}, error) {
 
@@ -55,9 +53,10 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 	if err != nil {
 		return nil, err
 	}
-	if _, exists := IdState[dataJson.Id]; exists {
-		return nil, fmt.Errorf("key Id is already exists")
+	if id, err := ctx.GetStub().GetState(dataJson.Id); err != nil || id != nil {
+		return nil, fmt.Errorf("key Id is already exists %s, %s", err, string(id))
 	}
+
 	l, err := hex.DecodeString(dataJson.Key)
 	if err != nil {
 		return nil, err
@@ -90,7 +89,9 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 		return nil, err
 	}
 
-	IdState[dataJson.Id] = true
+	if err = ctx.GetStub().PutState(dataJson.Id, []byte("True")); err != nil {
+		return nil, err
+	}
 
 	response := &TxDetails{
 		From:   "Bridge",
@@ -124,8 +125,8 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, da
 		return nil, err
 	}
 
-	if _, exists := IdState[dataJson.Id]; exists {
-		return nil, fmt.Errorf("key Id is already exists")
+	if id, err := ctx.GetStub().GetState(dataJson.Id); err != nil || id != nil {
+		return nil, fmt.Errorf("key Id is already exists %s, %s", err, string(id))
 	}
 
 	bigAmount := big.NewInt(0)
@@ -144,6 +145,10 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, da
 
 	_, err = bridge.Bridge(ctx, "BurnFrom", dataJson.User, dataJson.Amount, dataJson.Message, dataJson.Signature)
 	if err != nil {
+		return nil, err
+	}
+
+	if err = ctx.GetStub().PutState(dataJson.Id, []byte("True")); err != nil {
 		return nil, err
 	}
 

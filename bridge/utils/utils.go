@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -27,11 +28,11 @@ func ParsePositive(s string) (decimal.Decimal, error) {
 	var err error
 
 	if d, err = decimal.NewFromString(s); err != nil {
-		return d, fmt.Errorf("Error parsing string: %s", err)
+		return d, fmt.Errorf("error parsing string: %s", err)
 	}
 
-	if isNumeric(s) == false {
-		return d, fmt.Errorf("Error string is not valid number")
+	if !isNumeric(s) {
+		return d, fmt.Errorf("error string is not valid number")
 	}
 
 	if !d.IsPositive() {
@@ -75,6 +76,12 @@ func GetMsgForSign(_address, swapId string, _amount *big.Int) (string, error) {
 	hash.Write(bytes)
 	buf = hash.Sum(buf)
 
-	return hexutil.Encode(buf), nil
+	haa2 := common.HexToHash(hexutil.Encode(buf))
+
+	prefixedHash := crypto.Keccak256Hash(
+		[]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%v", len(common.HexToHash(hexutil.Encode(buf))))),
+		haa2.Bytes(),
+	)
+	return prefixedHash.Hex(), nil
 
 }
