@@ -2,6 +2,7 @@ package chaincode_test
 
 import (
 	"fmt"
+	"log"
 	"testing"
 
 	"github.com/hyperledger/fabric-chaincode-go/shim"
@@ -44,7 +45,7 @@ func TestMint(t *testing.T) {
 	transactionContext.GetStubReturns(chaincodeStub)
 
 	mint := chaincode.SmartContract{}
-	resp, err := mint.Mint(transactionContext, 10)
+	resp, err := mint.MintAndTransfer(transactionContext, "user1","10", " ", " ")
 	require.NoError(t, err)
 	fmt.Println(resp)
 
@@ -56,10 +57,21 @@ func TestBurn(t *testing.T) {
 	transactionContext.GetStubReturns(chaincodeStub)
 
 	burn := chaincode.SmartContract{}
-	resp, err := burn.Burn(transactionContext, 10)
+	resp, err := burn.BurnFrom(transactionContext, "user1","10", " ", " ")
 	require.NoError(t, err)
 	fmt.Println(resp)
 }
+
+func TestTransferFrom(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	transfer := chaincode.SmartContract{}
+	err := transfer.TransferFrom(transactionContext, "00x", "00x5", "10")
+	require.NoError(t, err)
+}
+
 
 func TestTransfer(t *testing.T) {
 	chaincodeStub := &mocks.ChaincodeStub{}
@@ -67,11 +79,31 @@ func TestTransfer(t *testing.T) {
 	transactionContext.GetStubReturns(chaincodeStub)
 
 	transfer := chaincode.SmartContract{}
-	resp, err := transfer.TransferFrom(transactionContext, "00x", "00x5", 10, "sign", "msg")
+	resp, err := transfer.Transfer(transactionContext, "00x", "00x5", "10", " ", " ")
 	require.NoError(t, err)
-	fmt.Println(resp)
+	log.Println(resp)
 }
 
+func TestApprove(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	approve := chaincode.SmartContract{}
+	err := approve.Approve(transactionContext, "00x5", 10)
+	require.NoError(t, err)
+}
+
+func TestAllowance(t *testing.T) {
+	chaincodeStub := &mocks.ChaincodeStub{}
+	transactionContext := &mocks.TransactionContext{}
+	transactionContext.GetStubReturns(chaincodeStub)
+
+	allownace := chaincode.SmartContract{}
+	res, err := allownace.Allowance(transactionContext, "0x0", "00x5")
+	require.NoError(t, err)
+	log.Println(res)
+}
 func TestGetInfo(t *testing.T) {
 	chaincodeStub := &mocks.ChaincodeStub{}
 	transactionContext := &mocks.TransactionContext{}
@@ -82,3 +114,6 @@ func TestGetInfo(t *testing.T) {
 	fmt.Println(resp)
 	require.NoError(t, err)
 }
+
+
+
