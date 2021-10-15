@@ -2,7 +2,7 @@ package bridge
 
 import (
 	"fmt"
-
+	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -19,12 +19,16 @@ func Bridge(ctx contractapi.TransactionContextInterface, fcName, toWallet, amoun
 	}
 
 	res := ctx.GetStub().InvokeChaincode("conx", queryArgs, "mychannel")
+	if res.Status == shim.OK {
+		return false, fmt.Errorf("error occured while invoke %s", res.Message)
+	}
 	if res.Payload == nil {
 		return false, fmt.Errorf("error occured while invoking chaincode %s", res.Payload)
 	}
 	if res.Payload != nil {
 		return true, nil
 	}
+
 
 	return false, fmt.Errorf("error while invoking chaincode")
 }
