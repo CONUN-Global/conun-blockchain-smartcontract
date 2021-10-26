@@ -2,8 +2,11 @@ package util
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/shopspring/decimal"
@@ -86,4 +89,42 @@ func VerifyMsgAddr(from, sign, msg string) (bool, error) {
 func mustDecodeUtil(input string) ([]byte, error) {
 	dec, err := hexutil.Decode(input)
 	return dec, err
+}
+
+func GetMsgForSign(_address string, _amount *big.Int) (string, error) {
+
+	uint256Ty, _ := abi.NewType("uint256", "uint256", nil)
+	addressTy, _ := abi.NewType("address", "address", nil)
+
+	arguments := abi.Arguments{
+		{
+			Type: uint256Ty,
+		},
+		{
+			Type: addressTy,
+		},
+	}
+
+	bytes, err := arguments.Pack(
+		_amount,
+		common.HexToAddress(_address),
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	var buf []byte
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(bytes)
+	buf = hash.Sum(buf)
+
+	haa2 := common.HexToHash(hexutil.Encode(buf))
+
+	prefixedHash := crypto.Keccak256Hash(
+		[]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%v", len(common.HexToHash(hexutil.Encode(buf))))),
+		haa2.Bytes(),
+	)
+	return prefixedHash.Hex(), nil
+
 }

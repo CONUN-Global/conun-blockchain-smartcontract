@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -147,6 +148,20 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 		return nil, fmt.Errorf("amount must be a positive integer")
 	}
 
+	bigAmount := big.NewInt(0)
+	if _, ok := bigAmount.SetString(amount, 10); !ok {
+		return nil, fmt.Errorf("error parsing amount")
+	}
+
+	hashedMsg, err := util.GetMsgForSign(user, bigAmount)
+	if err != nil {
+		return nil, err
+	}
+
+	if c := strings.Compare(hashedMsg, msg); c != 0 {
+		return nil, fmt.Errorf("integrity check failed")
+	}
+
 	if err = base.AddToken(ctx, amount, user); err != nil {
 		return nil, err
 	}
@@ -229,6 +244,20 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, us
 		return nil, fmt.Errorf("burn amount must be integer string")
 	}
 
+	bigAmount := big.NewInt(0)
+	if _, ok := bigAmount.SetString(amount, 10); !ok {
+		return nil, fmt.Errorf("error parsing amount")
+	}
+
+	hashedMsg, err := util.GetMsgForSign(user, bigAmount)
+	if err != nil {
+		return nil, err
+	}
+
+	if c := strings.Compare(hashedMsg, msg); c != 0 {
+		return nil, fmt.Errorf("integrity check failed")
+	}
+
 	if err = base.SubstractToken(ctx, amount, user); err != nil {
 		return nil, err
 	}
@@ -306,6 +335,20 @@ func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, fr
 	// verify for postive integer
 	if decimalAmount, err = util.ParsePositive(amount); err != nil {
 		return nil, fmt.Errorf("%s is not positive integer", amount)
+	}
+
+	bigAmount := big.NewInt(0)
+	if _, ok := bigAmount.SetString(amount, 10); !ok {
+		return nil, fmt.Errorf("error parsing amount")
+	}
+
+	hashedMsg, err := util.GetMsgForSign(recipient, bigAmount)
+	if err != nil {
+		return nil, err
+	}
+
+	if c := strings.Compare(hashedMsg, msg); c != 0 {
+		return nil, fmt.Errorf("integrity check failed")
 	}
 	// move token between wallets
 	err = base.MoveToken(ctx, from, recipient, amount)
