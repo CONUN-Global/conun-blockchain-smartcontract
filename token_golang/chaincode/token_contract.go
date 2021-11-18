@@ -127,7 +127,7 @@ func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface, owner 
 
 	Return success interface or error
 */
-func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterface, user, amount, msg, signature string) (interface{}, error) {
+func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterface, user, amount, msg, signature string, swapId string) (interface{}, error) {
 
 	var IncrAmount decimal.Decimal
 
@@ -136,7 +136,7 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 	if err != nil {
 		return nil, fmt.Errorf("failed while getting minterAddress %s", err)
 	} else if minterByte == nil {
-		return nil, fmt.Errorf("Contract is not initialized yet")
+		return nil, fmt.Errorf("contract is not initialized yet")
 	}
 	minter := string(minterByte)
 	// check if contract caller is contract owner
@@ -153,7 +153,7 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 		return nil, fmt.Errorf("error parsing amount")
 	}
 
-	hashedMsg, err := util.GetMsgForSign(user, bigAmount)
+	hashedMsg, err := util.GetMsgForSign(user, swapId, bigAmount)
 	if err != nil {
 		return nil, err
 	}
@@ -190,6 +190,9 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 	}
 
 	dtl, err := json.Marshal(details)
+	if err != nil {
+		return nil, err
+	}
 	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
 	if err != nil {
 		return nil, err
@@ -223,7 +226,7 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 
 	Return success interface or error
 */
-func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, user, amount, msg, signature string) (interface{}, error) {
+func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, user, amount, msg, signature string, swapId string) (interface{}, error) {
 
 	var BurningAmount decimal.Decimal
 	// Check minter authorization - this sample assumes Org1 is the central banker with privilege to burn new tokens
@@ -249,7 +252,7 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, us
 		return nil, fmt.Errorf("error parsing amount")
 	}
 
-	hashedMsg, err := util.GetMsgForSign(user, bigAmount)
+	hashedMsg, err := util.GetMsgForSign(user, swapId, bigAmount)
 	if err != nil {
 		return nil, err
 	}
@@ -285,6 +288,9 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, us
 	}
 
 	dtl, err := json.Marshal(details)
+	if err != nil {
+		return nil, err
+	}
 	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
 	if err != nil {
 		return nil, err
@@ -342,7 +348,7 @@ func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, fr
 		return nil, fmt.Errorf("error parsing amount")
 	}
 
-	hashedMsg, err := util.GetMsgForSign(recipient, bigAmount)
+	hashedMsg, err := util.GetMsgForSignTransfer(recipient, bigAmount)
 	if err != nil {
 		return nil, err
 	}
@@ -376,6 +382,9 @@ func (s *SmartContract) Transfer(ctx contractapi.TransactionContextInterface, fr
 	}
 
 	dtl, err := json.Marshal(details)
+	if err != nil {
+		return nil, err
+	}
 	err = ctx.GetStub().PutState(ctx.GetStub().GetTxID(), dtl)
 	if err != nil {
 		return nil, err
@@ -642,7 +651,7 @@ func (s *SmartContract) TransferFrom(ctx contractapi.TransactionContextInterface
 	return nil
 }
 
-func addressHelper(encodedAdr, client string) (bool, error) {
+func AddressHelper(encodedAdr, client string) (bool, error) {
 
 	decodedAdr, err := base64.StdEncoding.DecodeString(encodedAdr)
 	if err != nil {

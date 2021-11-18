@@ -5,12 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/bridge/base"
 	"github.com/bridge/bridge"
-	"github.com/bridge/utils"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -54,7 +52,7 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 		return nil, err
 	}
 	if id, err := ctx.GetStub().GetState(dataJson.Id); err != nil || id != nil {
-		return nil, fmt.Errorf("key Id is already exists %s, %s", err, string(id))
+		return nil, fmt.Errorf(fmt.Sprintf("key Id is already exists %s,\n %s", err, string(id)))
 	}
 
 	l, err := hex.DecodeString(dataJson.Key)
@@ -70,21 +68,7 @@ func (s *SmartContract) MintAndTransfer(ctx contractapi.TransactionContextInterf
 		return nil, fmt.Errorf("keys are not matching")
 	}
 
-	bigAmount := big.NewInt(0)
-	if _, ok := bigAmount.SetString(dataJson.Amount, 10); !ok {
-		return nil, fmt.Errorf("error parsing amount")
-	}
-
-	hashedMsg, err := utils.GetMsgForSign(dataJson.User, dataJson.Id, bigAmount)
-	if err != nil {
-		return nil, err
-	}
-
-	if c := strings.Compare(hashedMsg, dataJson.Message); c != 0 {
-		return nil, fmt.Errorf("integrity check failed")
-	}
-
-	_, err = bridge.Bridge(ctx, "MintAndTransfer", dataJson.User, dataJson.Amount, dataJson.Message, dataJson.Signature)
+	_, err = bridge.Bridge(ctx, "MintAndTransfer", dataJson.User, dataJson.Amount, dataJson.Message, dataJson.Signature, dataJson.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -129,21 +113,7 @@ func (s *SmartContract) BurnFrom(ctx contractapi.TransactionContextInterface, da
 		return nil, fmt.Errorf("key Id is already exists %s, %s", err, string(id))
 	}
 
-	bigAmount := big.NewInt(0)
-	if _, ok := bigAmount.SetString(dataJson.Amount, 10); !ok {
-		return nil, fmt.Errorf("error parsing amount")
-	}
-
-	hashedMsg, err := utils.GetMsgForSign(dataJson.User, dataJson.Id, bigAmount)
-	if err != nil {
-		return nil, err
-	}
-
-	if c := strings.Compare(hashedMsg, dataJson.Message); c != 0 {
-		return nil, fmt.Errorf("integrity check failed")
-	}
-
-	_, err = bridge.Bridge(ctx, "BurnFrom", dataJson.User, dataJson.Amount, dataJson.Message, dataJson.Signature)
+	_, err = bridge.Bridge(ctx, "BurnFrom", dataJson.User, dataJson.Amount, dataJson.Message, dataJson.Signature, dataJson.Id)
 	if err != nil {
 		return nil, err
 	}

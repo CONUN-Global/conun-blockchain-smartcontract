@@ -3,15 +3,7 @@ package utils
 import (
 	"fmt"
 
-	"math/big"
-
 	"github.com/shopspring/decimal"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-	"golang.org/x/crypto/sha3"
 )
 
 func isNumeric(s string) bool {
@@ -40,48 +32,5 @@ func ParsePositive(s string) (decimal.Decimal, error) {
 	}
 
 	return d, nil
-
-}
-
-func GetMsgForSign(_address, swapId string, _amount *big.Int) (string, error) {
-
-	uint256Ty, _ := abi.NewType("uint256", "uint256", nil)
-	addressTy, _ := abi.NewType("address", "address", nil)
-	swapID, _ := abi.NewType("bytes32", "bytes32", nil)
-
-	arguments := abi.Arguments{
-		{
-			Type: swapID,
-		},
-		{
-			Type: uint256Ty,
-		},
-		{
-			Type: addressTy,
-		},
-	}
-
-	bytes, err := arguments.Pack(
-		common.HexToHash("0x"+swapId),
-		_amount,
-		common.HexToAddress(_address),
-	)
-
-	if err != nil {
-		return "", err
-	}
-
-	var buf []byte
-	hash := sha3.NewLegacyKeccak256()
-	hash.Write(bytes)
-	buf = hash.Sum(buf)
-
-	haa2 := common.HexToHash(hexutil.Encode(buf))
-
-	prefixedHash := crypto.Keccak256Hash(
-		[]byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%v", len(common.HexToHash(hexutil.Encode(buf))))),
-		haa2.Bytes(),
-	)
-	return prefixedHash.Hex(), nil
 
 }
