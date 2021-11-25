@@ -2,7 +2,6 @@
 <p align="center">
   <img alt="CONUN preview" src="https://raw.githubusercontent.com/CONUN-Global/conun-homepage/fcc7721617445e0fa571ac00bc8463ee3716ada8/src/assets/icons/conun-logo.svg" height="60" />
   <br><br>
-  <p align="center">Distributed Supercomputing Platform</p>
 </p>
 
 <br/>
