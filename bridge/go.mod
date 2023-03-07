@@ -13,7 +13,7 @@ require (
 	github.com/shopspring/decimal v1.2.0
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
-	golang.org/x/sys v0.0.0-20211117180635-dee7805ff2e1 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	google.golang.org/genproto v0.0.0-20210405174219-a39eb2f71cb9 // indirect
 	google.golang.org/grpc v1.42.0 // indirect
 )
